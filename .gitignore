@@ -1,0 +1,11 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+.DS_Store
+artifacts/harness/results.json
+artifacts/harness/production-results.json
+harness/artifacts/
+.env
+.env.*
+*.local

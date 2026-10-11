@@ -1,0 +1,38 @@
+import { test, expect } from '@playwright/test';
+import { createHash } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
+
+test('production assets and model interactions work under repository URL', async ({ page, baseURL }) => {
+  const errors: string[] = [];
+  const failures: string[] = [];
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('response', r => { if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`); });
+  await page.goto(baseURL!);
+  await expect(page.getByRole('heading', { name: '智慧楼宇综合管理平台' })).toBeVisible();
+  const canvas = page.locator('.scene-host canvas');
+  await expect(canvas).toBeVisible();
+  await expect(page.getByRole('button', { name: '选择A座' })).toBeVisible();
+  expect(await page.evaluate(() => typeof (window as any).__BUILDING_HARNESS__)).toBe('undefined');
+  const rect = (await canvas.boundingBox())!;
+  const before = await canvas.screenshot();
+  await page.mouse.move(rect.x + rect.width * .48, rect.y + rect.height * .55);
+  await page.mouse.down();
+  await page.mouse.move(rect.x + rect.width * .7, rect.y + rect.height * .6, { steps: 20 });
+  await page.mouse.up();
+  const after = await canvas.screenshot();
+  expect(createHash('sha256').update(after).digest('hex')).not.toBe(createHash('sha256').update(before).digest('hex'));
+  await page.getByRole('button', { name: '复位视角' }).click();
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  await page.getByRole('button', { name: '选择设备 空调机组' }).click();
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('AC-01');
+  await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.getByRole('button', { name: '3D 园区' }).click();
+  await page.getByRole('button', { name: '能源分析', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '今日用电趋势' })).toBeVisible();
+  await page.getByRole('button', { name: '园区总览', exact: true }).click();
+  mkdirSync('artifacts/harness', { recursive: true });
+  await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/production-online.png' : 'artifacts/harness/production-local.png' });
+  expect(errors, 'Production console errors').toEqual([]);
+  expect(failures, 'Production asset HTTP failures').toEqual([]);
+});

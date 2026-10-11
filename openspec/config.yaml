@@ -1,0 +1,14 @@
+schema: spec-driven
+context: |
+  Greenfield Chinese smart-building digital twin dashboard.
+  React + TypeScript + Vite + Three.js + ECharts. Local development only.
+  User supplied architectural-dashboard references; user explicitly requires rotatable models
+  and OpenSpec + harness development. No source BIM model or IoT endpoint provided.
+  Parametric geometry and demo data are explicitly identified in UI.
+  Harness means a reproducible Playwright acceptance loop, browser diagnostics and visual evidence.
+rules:
+  specs:
+    - Every requirement MUST have an observable scenario.
+    - Real rendered geometry and real pointer interactions are required.
+  tasks:
+    - Map implementation and verification tasks to acceptance requirements.
