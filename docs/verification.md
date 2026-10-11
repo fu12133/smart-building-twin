@@ -20,6 +20,16 @@ Visual inspection covers desktop default/rotated, phone, zoomed facade and rever
 
 Additional reproducible evidence: `node harness/capture-architecture.mjs` generates `architecture-overview.png`, `architecture-closeup.png` and `architecture-reverse.png` under `artifacts/harness/`, using only actual wheel/pointer controls and checking for browser errors.
 
+## 2026-10-12 Architectural night scene
+
+The user's second visual review rejected the previous miniature/block-like appearance. This change replaces per-pane bevel gradients with broad reflective facade bands and sparse small office lights, fine white mullions, a real extruded curved commercial podium, pitched skylights, warm fixtures, planted islands and alpha-cut leaf sprays. Desktop uses a full-workspace scene with translucent floating data panels. Mobile retains the stacked view. Rendering uses a multisampled HDR target, restrained bloom and tone mapping; stationary views still stop GPU redraws.
+
+Three local CC0 texture assets total approximately 2.3 MB; official source/license links are in `public/assets/CREDITS.md`. Download MD5 hashes match the official metadata. The app makes no runtime asset API call. Vite base paths apply to all three textures. PMREM targets, HDR input textures, foliage textures, instanced buffers and postprocessing targets are disposed with the scene; assets arriving after unmount are discarded.
+
+Validation so far: all ten existing scenarios passed with the final multisampled renderer (**10 passed**, 1.9 min run also contained one new test failure). The initial V8 test attempted to call the development accessor during React's teardown/recreation gap; its poll now waits for a present accessor rather than throwing. Focused V2 + V8 then passed **2 / 2 (27.8 s)**: final desktop panel bounds/reset and an intentionally delayed HDR completing after reload leave one usable renderer with no unexpected browser errors. Production-path build and strict OpenSpec validation passed. The repository-prefix production harness passed **1 / 1 (22.9 s)**, including all three locally packaged asset URLs, real rotation, floor/device controls and no browser errors. An earlier preview attempt omitted the Vite base setting and served HTML at texture URLs; restarting only the task-owned preview with the correct base resolved the verification setup. Full Linux CI and actual public-site checks are recorded in the release entry after deployment.
+
+Visual inspection checked default, close and reverse angles, floor/device detail and phone layout. An initial overexposed lighting setup was corrected before release. The model remains procedural and its architectural detail does not fully reproduce the reference's production BIM render. No physical GPU frame-rate claim is made.
+
 ## Automated evidence
 
 `npm run build` passed TypeScript validation and production bundling. `npm run spec:validate` passed OpenSpec strict validation. `npm run harness` passed **9 / 9** acceptance tests in **20.8 s**, using Microsoft Edge headless + SwiftShader on Windows. The final run produced no unexpected browser console errors or uncaught exceptions.

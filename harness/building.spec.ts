@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 
-type Snapshot = { camera: number[]; target: number[]; distance: number; frames: number; objects: number; mode: string; auto: boolean; autoActive: boolean; selected: string; floor: number; devicesVisible: boolean; surroundingsVisible: boolean };
+type Snapshot = { camera: number[]; target: number[]; distance: number; frames: number; objects: number; mode: string; auto: boolean; autoActive: boolean; selected: string; floor: number; devicesVisible: boolean; surroundingsVisible: boolean; assetsReady: boolean };
 const snapshot = (page: Page): Promise<Snapshot> => page.evaluate(() => (window as any).__BUILDING_HARNESS__());
 const delta = (a: number[], b: number[]) => Math.sqrt(a.reduce((v, n, i) => v + (n - b[i]) ** 2, 0));
 const errors = new Map<Page, string[]>();
@@ -17,6 +17,7 @@ async function ready(page: Page) {
   await page.goto('/');
   await expect(page.locator('.data-source')).toContainText('演示数据');
   await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(0);
+  await expect.poll(async () => (await snapshot(page)).assetsReady).toBe(true);
   expect((await snapshot(page)).objects).toBeGreaterThan(1000);
 }
 
@@ -172,4 +173,27 @@ test('V7: idle scene stops GPU redraws and controls/layers redraw visible geomet
   await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(visible.frames);
   const after = await canvas.screenshot();
   expect(createHash('sha256').update(after).digest('hex')).not.toBe(createHash('sha256').update(before).digest('hex'));
+});
+
+test('V8: delayed night asset finishing after scene reload leaves a usable single renderer', async ({ page }) => {
+  let requests = 0;
+  await page.route('**/assets/night-city.hdr', async route => {
+    requests++;
+    const response = await route.fetch();
+    await new Promise(resolve => setTimeout(resolve, 6000));
+    await route.fulfill({ response });
+  });
+  await page.goto('/');
+  await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().frames ?? 0)).toBeGreaterThan(0);
+  expect((await snapshot(page)).assetsReady).toBe(false);
+  await page.locator('.scene-host canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
+  await page.getByRole('button', { name: '重新加载' }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().assetsReady ?? false)).toBe(true);
+  await page.waitForTimeout(700);
+  await expect(page.locator('.scene-host canvas')).toHaveCount(1);
+  await expect(page.getByRole('alert')).toBeHidden();
+  expect(requests).toBeGreaterThanOrEqual(2);
+  const before = await snapshot(page);
+  await page.getByRole('button', { name: '放大模型' }).click();
+  await expect.poll(async () => (await snapshot(page)).distance).toBeLessThan(before.distance);
 });

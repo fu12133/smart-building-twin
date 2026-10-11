@@ -1,21 +1,42 @@
 import * as THREE from 'three';
 import { buildings } from './data';
 
-// Deterministic procedural assets: no external image/model dependency.
+// Deterministic geometry with locally packaged, CC0 foliage textures.
 const noise = (n: number) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
 type Finish = THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
 export class Architecture {
   readonly textures: THREE.Texture[] = [];
   private stone: Finish;
   private metal = new THREE.MeshStandardMaterial({ color: 0xc6d0d3, metalness: .35, roughness: .3 });
-  private framing = new THREE.MeshStandardMaterial({ color: 0xc8d4d9, metalness: .25, roughness: .4, emissive: 0x738c9c, emissiveIntensity: .2 });
+  private framing = new THREE.MeshStandardMaterial({ color: 0xf1f4ee, metalness: .25, roughness: .3, emissive: 0xc9e2ec, emissiveIntensity: .35 });
   private bronze = new THREE.MeshStandardMaterial({ color: 0x9b8765, metalness: .6, roughness: .34 });
   private warm = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.55, .65) });
   private dark = new THREE.MeshStandardMaterial({ color: 0x17242b, roughness: .85 });
   private unitBox = new THREE.BoxGeometry(1, 1, 1);
+  private disposed = false;
+  private assetsPending = 2;
+  get assetsReady() { return this.assetsPending === 0; }
+  private foliage: THREE.MeshStandardMaterial;
 
-  constructor(private renderer: THREE.WebGLRenderer) {
-    this.stone = new THREE.MeshStandardMaterial({ color: 0xffefd0, map: this.surface('stone'), roughness: .7, metalness: .04, emissive: 0x6f542e, emissiveIntensity: .14 });
+  constructor(private renderer: THREE.WebGLRenderer, invalidate: () => void) {
+    this.stone = new THREE.MeshStandardMaterial({ color: 0xffefd0, map: this.surface('stone'), roughness: .65, metalness: .04, emissive: 0xd3a65c, emissiveIntensity: .16 });
+    this.foliage = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .92, side: THREE.DoubleSide, alphaTest: .42 });
+    const loader = new THREE.TextureLoader();
+    const load = (name: string, color: boolean) => {
+      const texture = loader.load(import.meta.env.BASE_URL + 'assets/' + name, t => {
+        if (this.disposed) { t.dispose(); return; }
+        this.assetsPending--;
+        invalidate();
+      }, undefined, () => {
+        if (this.disposed) { texture.dispose(); return; }
+        this.assetsPending--; this.foliage.visible = false; invalidate();
+      });
+      if (color) texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      this.textures.push(texture); return texture;
+    };
+    this.foliage.map = load('leaves-color.jpg', true);
+    this.foliage.alphaMap = load('leaves-alpha.png', false);
   }
   private texture(canvas: HTMLCanvasElement) {
     const texture = new THREE.CanvasTexture(canvas);
@@ -70,7 +91,7 @@ export class Architecture {
   background() {
     const c = document.createElement('canvas'); c.width = 4; c.height = 512;
     const ctx = c.getContext('2d')!, g = ctx.createLinearGradient(0, 0, 0, 512);
-    g.addColorStop(0, '#092a48'); g.addColorStop(.6, '#214c65'); g.addColorStop(1, '#091a27');
+    g.addColorStop(0, '#092a48'); g.addColorStop(.6, '#194267'); g.addColorStop(1, '#091a27');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 4, 512); return this.texture(c);
   }
   box(parent: THREE.Group, w: number, h: number, d: number, x: number, y: number, z: number, material: Finish | Finish[], shadow = true) {
@@ -90,34 +111,38 @@ export class Architecture {
     c.width = e.width = 1024; c.height = e.height = 2048;
     const ctx = c.getContext('2d')!, em = e.getContext('2d')!, cw = c.width / columns, ch = c.height / floors;
     em.fillStyle = '#000'; em.fillRect(0, 0, c.width, c.height);
+    // Broad reflection bands belong to the whole elevation, not a bevel on every pane.
+    const reflection = ctx.createLinearGradient(0, 0, 1024, 0);
+    reflection.addColorStop(0, subdued ? '#101f2c' : '#254761');
+    reflection.addColorStop(.28, subdued ? '#20313e' : '#5f8297');
+    reflection.addColorStop(.55, subdued ? '#112330' : '#2b546f');
+    reflection.addColorStop(.8, subdued ? '#182a38' : '#7c96a4');
+    reflection.addColorStop(1, subdued ? '#0e1c29' : '#294d69');
+    ctx.fillStyle = reflection; ctx.fillRect(0, 0, 1024, 2048);
     for (let row = 0; row < floors; row++) for (let col = 0; col < columns; col++) {
-      const n = noise(row * 91 + col * 37 + seed), lit = n > (subdued ? .95 : .86), x = col * cw, y = row * ch;
-      // Separate glass, recessed spandrel and office detail; an emissive map lights only occupied rooms.
-      const shade = Math.floor(55 + n * 22);
-      ctx.fillStyle = lit ? '#939d9c' : `rgb(${shade},${shade + 40},${shade + 61})`;
-      ctx.fillRect(x, y, cw, ch);
-      const gradient = ctx.createLinearGradient(x, y, x + cw, y + ch);
-      gradient.addColorStop(0, lit ? 'rgba(255,238,198,.32)' : 'rgba(149,201,224,.34)'); gradient.addColorStop(1, 'rgba(5,18,28,.48)');
-      ctx.fillStyle = gradient; ctx.fillRect(x + 2, y + 2, cw - 4, ch * .8);
-      if (lit) {
-        em.fillStyle = n > .9 ? '#dbc595' : '#958974'; em.fillRect(x + 3, y + 3, cw - 6, ch * .76);
-        for (let b = 0; b < 5; b++) {
-          ctx.fillStyle = 'rgba(38,39,36,.2)'; ctx.fillRect(x + 4, y + 7 + b * ch / 8, cw - 8, 1.5);
-          em.fillStyle = '#695f4d'; em.fillRect(x + 4, y + 7 + b * ch / 8, cw - 8, 1.5);
+      const n = noise(row * 91 + col * 37 + seed), x = col * cw, y = row * ch;
+      ctx.fillStyle = `rgba(3,14,22,${.015 + n * .075})`;
+      ctx.fillRect(x + 1, y + 1, cw - 2, ch - 2);
+      ctx.fillStyle = 'rgba(10,25,34,.36)'; ctx.fillRect(x, y + ch * .9, cw, ch * .1);
+      // Occupied offices are narrow warm interior strips, with dark desks and blinds.
+      if (n > (subdued ? .985 : .885)) {
+        const wx = x + cw * .18, wy = y + ch * .2, ww = cw * (.3 + n * .16), wh = ch * .58;
+        ctx.fillStyle = '#b8c1b4'; ctx.fillRect(wx, wy, ww, wh);
+        em.fillStyle = n > .96 ? '#fff3cf' : '#d2aa72'; em.fillRect(wx, wy, ww, wh);
+        ctx.fillStyle = '#59666b'; ctx.fillRect(wx, wy + wh * .72, ww * .7, wh * .18);
+        em.fillStyle = '#181b18'; em.fillRect(wx, wy + wh * .72, ww * .7, wh * .18);
+        for (let b = 0; b < 6; b++) {
+          ctx.fillStyle = 'rgba(48,56,56,.28)'; ctx.fillRect(wx, wy + b * wh / 6, ww, 1);
+          em.fillStyle = '#836f51'; em.fillRect(wx, wy + b * wh / 6, ww, 1);
         }
-        // A desk and interior partition behind the window, varied by room.
-        const dx = x + cw * (.18 + n * .24);
-        ctx.fillStyle = '#444640'; ctx.fillRect(dx, y + ch * .61, cw * .35, ch * .13);
-        em.fillStyle = '#282924'; em.fillRect(dx, y + ch * .61, cw * .35, ch * .13);
-        ctx.fillStyle = '#a9b6b0'; ctx.fillRect(x + cw * .48, y + ch * .2, 2, ch * .5);
       }
-      ctx.fillStyle = '#405b70'; ctx.fillRect(x, y + ch * .85, cw, ch * .15);
-      ctx.fillStyle = '#8c9ca5'; ctx.fillRect(x, y, 2.2, ch); ctx.fillRect(x, y, cw, 1.8);
-      ctx.fillStyle = '#0b1d28'; ctx.fillRect(x + cw - 2, y, 2, ch);
+      ctx.fillStyle = subdued ? '#344653' : '#879ba5';
+      ctx.fillRect(x, y, 1.2, ch); ctx.fillRect(x, y, cw, 1);
     }
-    const parameters = { map: this.texture(c), emissiveMap: this.texture(e), emissive: 0xffe2a4, emissiveIntensity: subdued ? .4 : .85, metalness: .35, roughness: .19, envMapIntensity: subdued ? .85 : 1.6 };
-    return subdued ? new THREE.MeshStandardMaterial(parameters) : new THREE.MeshPhysicalMaterial({ ...parameters, clearcoat: 1, clearcoatRoughness: .12 });
+    const parameters = { map: this.texture(c), emissiveMap: this.texture(e), emissive: 0xffefd1, emissiveIntensity: subdued ? .24 : 2.2, metalness: .38, roughness: .16, envMapIntensity: subdued ? .3 : .8 };
+    return subdued ? new THREE.MeshStandardMaterial(parameters) : new THREE.MeshPhysicalMaterial({ ...parameters, clearcoat: .8, clearcoatRoughness: .15 });
   }
+
   tower(parent: THREE.Group, b: typeof buildings[number]) {
     const w = b.width, d = b.depth, h = b.height, base = 5.4;
     this.box(parent, w + 2.2, base, d + 2.2, 0, base / 2, 0, this.stone);
@@ -125,14 +150,14 @@ export class Architecture {
     this.box(parent, w, h, d, 0, h / 2 + base, 0, [side, side, this.metal, this.dark, front, front]);
     const frames: number[][] = [], caps: number[][] = [];
     const cols = Math.round(w / 1.75), sides = Math.round(d / 1.75);
-    for (let i = 0; i <= cols; i++) for (const z of [-d / 2 - .07, d / 2 + .07]) frames.push([-w / 2 + i * w / cols, h / 2 + base, z, .085, h, .14]);
-    for (let i = 0; i <= sides; i++) for (const x of [-w / 2 - .07, w / 2 + .07]) frames.push([x, h / 2 + base, -d / 2 + i * d / sides, .14, h, .085]);
+    for (let i = 0; i <= cols; i++) for (const z of [-d / 2 - .07, d / 2 + .07]) frames.push([-w / 2 + i * w / cols, h / 2 + base, z, .11, h, .14]);
+    for (let i = 0; i <= sides; i++) for (const x of [-w / 2 - .07, w / 2 + .07]) frames.push([x, h / 2 + base, -d / 2 + i * d / sides, .14, h, .11]);
     for (let i = 0; i <= b.floors; i++) {
       const y = base + i * h / b.floors;
       for (const z of [-d / 2 - .07, d / 2 + .07]) caps.push([0, y, z, w + .2, .08, .16]);
       for (const x of [-w / 2 - .07, w / 2 + .07]) caps.push([x, y, 0, .16, .08, d + .2]);
     }
-    this.batch(parent, frames, this.framing); this.batch(parent, caps, this.framing);
+    this.batch(parent, frames, this.framing); this.batch(parent, caps, this.metal);
     const fins: number[][] = [];
     for (let i = 0; i <= cols; i += 4) for (const z of [-d / 2 - .12, d / 2 + .12]) fins.push([-w / 2 + i * w / cols, h / 2 + base, z, .14, h, .28]);
     for (let i = 0; i <= sides; i += 4) for (const x of [-w / 2 - .12, w / 2 + .12]) fins.push([x, h / 2 + base, -d / 2 + i * d / sides, .28, h, .14]);
@@ -157,7 +182,7 @@ export class Architecture {
   }
   ground(parent: THREE.Group) {
     const paving = new THREE.MeshStandardMaterial({ map: this.surface('paving'), color: 0xa0adb0, roughness: .95 });
-    const asphalt = new THREE.MeshStandardMaterial({ map: this.surface('road'), color: 0x697477, roughness: .88 });
+    const asphalt = new THREE.MeshStandardMaterial({ map: this.surface('road'), color: 0x343638, roughness: .88 });
     this.box(parent, 1000, 1, 1000, 0, -1.2, -30, asphalt, false).receiveShadow = true;
     this.box(parent, 117, .55, 95, -4, -.25, -6, paving, false).receiveShadow = true;
     this.box(parent, 140, .18, 3.5, 0, -.22, 38.5, this.stone, false);
@@ -167,42 +192,16 @@ export class Architecture {
     for (let z = -130; z < 100; z += 9) marks.push([64, -.65, z, .18, .035, 4]);
     for (let x = 31; x < 48; x += 2.2) marks.push([x, -.64, 46, 1.2, .04, 10]);
     this.batch(parent, marks, paint);
-    // A terraced commercial podium around a sunken glass atrium.
-    const glass = this.facade(25, 3, 31);
-    this.box(parent, 72, 7.8, 17, -13, 3.9, 24, this.stone);
-    this.box(parent, 23, 7.8, 35, -48, 3.9, 11, this.stone);
-    this.box(parent, 68, 5.8, .2, -13, 3.5, 32.55, glass, false);
-    this.box(parent, .2, 5.8, 31, -59.6, 3.5, 11, glass, false);
-    for (let tier = 0; tier < 3; tier++) {
-      this.box(parent, 73 - tier * 1.2, .3, 18 - tier, -13, 8 + tier * .33, 24, this.stone);
-      this.box(parent, 73 - tier * 1.2, .16, .12, -13, 8.1 + tier * .33, 33 - tier * .5, this.warm, false);
+    this.podium(parent);
+    const lawn = new THREE.MeshStandardMaterial({ color: 0x3f5128, roughness: 1 });
+    // Curved planted islands leave real pedestrian space between the podium and road.
+    for (let i = 0; i < 7; i++) {
+      const shape = new THREE.Shape();
+      shape.absellipse(0, 0, 4.8, 1.65, 0, Math.PI * 2, false, 0);
+      const island = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: .3, bevelEnabled: false, curveSegments: 24 }), [lawn, this.stone]);
+      island.rotation.x = -Math.PI / 2; island.rotation.z = .12;
+      island.position.set(-53 + i * 14, .08, 39 + Math.sin(i) * 2); island.receiveShadow = true; parent.add(island);
     }
-    this.box(parent, 23.6, .35, 36, -48, 8.2, 11, this.stone);
-    this.box(parent, .08, .08, 36, -59.85, 8.2, 11, this.warm, false);
-    const facadeFrames: number[][] = [];
-    for (let x = -47; x < 23; x += 2.8) facadeFrames.push([x, 3.7, 32.75, .09, 6.3, .12]);
-    for (const y of [1.1, 3.9, 6.8]) facadeFrames.push([-13, y, 32.75, 69, .13, .14]);
-    this.batch(parent, facadeFrames, this.bronze);
-    for (let x = -47; x < 24; x += 8.4) {
-      this.box(parent, .5, 7.1, .7, x, 3.6, 32.9, this.stone);
-      this.box(parent, .18, 6.4, .12, x + .3, 3.6, 33.28, this.warm, false);
-    }
-    this.box(parent, 9, 5.5, .3, -12, 2.85, 32.95, this.dark);
-    this.box(parent, 13, .4, 5.5, -12, 5.9, 35, this.bronze);
-    this.box(parent, 12.6, .07, .12, -12, 5.7, 37.7, this.warm, false);
-    for (const x of [-18, -6]) this.box(parent, .16, 5.5, .16, x, 2.75, 37.4, this.bronze);
-    // Roof skylights, air handling units and planted terrace.
-    for (let i = 0; i < 5; i++) {
-      const roof = this.box(parent, 7, .55, 6, -40 + i * 12, 9.2, 23, glass); roof.rotation.x = .08;
-      for (let j = 0; j < 4; j++) this.box(parent, .065, .62, 6.2, -43 + i * 12 + j * 2, 9.25, 23, this.metal, false);
-    }
-    for (let i = 0; i < 4; i++) this.box(parent, 2.6, 1.2, 3.4, -49 + i * 3, 9, 4, this.metal);
-    const lawn = new THREE.MeshStandardMaterial({ color: 0x465939, roughness: 1 });
-    for (let i = 0; i < 6; i++) {
-      this.box(parent, 4.4, .4, 2, -43 + i * 10.5, 8.7, 29.5, this.stone);
-      this.box(parent, 4, .5, 1.6, -43 + i * 10.5, 9.1, 29.5, lawn);
-    }
-    for (let i = 0; i < 12; i++) this.box(parent, 4, .4, 2.6, -47 + i * 5.9, .1, 37.4, lawn);
     this.vegetation(parent);
     for (let i = 0; i < 10; i++) {
       const x = -59 + i * 12, z = 40;
@@ -222,35 +221,123 @@ export class Architecture {
   private lightPool(parent: THREE.Group, x: number, z: number, size: number) {
     const c = document.createElement('canvas'); c.width = c.height = 64;
     const ctx = c.getContext('2d')!, g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-    g.addColorStop(0, 'rgba(255,221,153,.55)'); g.addColorStop(.3, 'rgba(255,221,153,.2)'); g.addColorStop(1, 'rgba(255,221,153,0)');
+    g.addColorStop(0, 'rgba(255,221,153,.3)'); g.addColorStop(.3, 'rgba(255,221,153,.12)'); g.addColorStop(1, 'rgba(255,221,153,0)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size * 2, size * 2), new THREE.MeshBasicMaterial({ map: this.texture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     mesh.rotation.x = -Math.PI / 2; mesh.position.set(x, .055, z); parent.add(mesh);
   }
+  private podium(parent: THREE.Group) {
+    const outline = new THREE.Shape();
+    outline.moveTo(-64, 16); outline.lineTo(-64, -23);
+    outline.quadraticCurveTo(-64, -36, -50, -39);
+    outline.quadraticCurveTo(-14, -46, 18, -36);
+    outline.quadraticCurveTo(28, -33, 28, -22);
+    outline.lineTo(28, -13); outline.lineTo(11, -13); outline.lineTo(11, -22);
+    outline.quadraticCurveTo(-15, -31, -40, -25);
+    outline.quadraticCurveTo(-45, -24, -45, -17);
+    outline.lineTo(-45, 16); outline.closePath();
+    const glass = new THREE.MeshPhysicalMaterial({ color: 0x56839b, roughness: .14, metalness: .45, envMapIntensity: 1.4, emissive: 0x9d8654, emissiveIntensity: .42, clearcoat: .8 });
+    const slab = (y: number, h: number, mat: Finish, scale = 1) => {
+      const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(outline, { depth: h, bevelEnabled: false, curveSegments: 32 }), mat);
+      mesh.rotation.x = -Math.PI / 2; mesh.position.y = y; mesh.scale.set(scale, scale, 1);
+      mesh.castShadow = mesh.receiveShadow = true; parent.add(mesh);
+    };
+    slab(.15, 1.05, this.stone); slab(1.2, 6.3, glass);
+    for (const y of [1.2, 3.25, 5.4, 7.5]) slab(y, .24, this.stone);
+    slab(7.8, .36, this.stone, 1.008); slab(8.16, .3, this.stone, .988); slab(8.46, .24, this.stone, .973);
+    const contour = outline.getPoints(240).map(p => new THREE.Vector3(p.x, 0, -p.y));
+    const curve = new THREE.CatmullRomCurve3(contour.slice(0, -1), true, 'centripetal');
+    for (const y of [1.4, 7.85, 8.47]) {
+      const line = new THREE.Mesh(new THREE.TubeGeometry(curve, 240, .065, 4, true), this.warm);
+      line.position.y = y; parent.add(line);
+    }
+    const pillars: number[][] = [], glazing: number[][] = [], glow: number[][] = [];
+    const length = curve.getLength(), count = Math.floor(length / 2.1);
+    for (let i = 0; i < count; i++) {
+      const t = i / count, p = curve.getPointAt(t), tangent = curve.getTangentAt(t), angle = Math.atan2(-tangent.z, tangent.x);
+      glazing.push([p.x, 4.3, p.z, .09, 6.4, .17, angle]);
+      if (i % 4 === 0) {
+        pillars.push([p.x, 3.85, p.z, .42, 7.5, .55, angle]);
+        glow.push([p.x + tangent.z * .31, 4.1, p.z - tangent.x * .31, .07, 6.6, .08, angle]);
+      }
+    }
+    this.batch(parent, glazing, this.metal); this.batch(parent, pillars, this.stone); this.batch(parent, glow, this.warm);
+    // Atrium skylights have pitched panes and fine white ribs rather than opaque roof cubes.
+    for (let i = 0; i < 4; i++) {
+      const x = -46 + i * 16, z = 31 + Math.sin(i) * 1.5;
+      const g = new THREE.Group(); g.position.set(x, 8.9, z); parent.add(g);
+      for (const side of [-1, 1]) {
+        const pane = this.box(g, 8, .12, 3.5, 0, .3, side * 1.5, glass, false); pane.rotation.x = side * .2;
+        for (let j = 0; j < 6; j++) {
+          const rib = this.box(g, .065, .15, 3.6, -4 + j * 1.6, .4, side * 1.5, this.framing, false); rib.rotation.x = side * .2;
+        }
+      }
+    }
+    const terraceGreen = new THREE.MeshStandardMaterial({ color: 0x3b4e25, roughness: 1 });
+    for (let i = 0; i < 6; i++) {
+      const x = -42 + i * 10, z = 35 + Math.sin(i * .55) * 1.2;
+      this.box(parent, 4.8, .45, 1.5, x, 8.8, z, this.stone);
+      this.box(parent, 4.55, .22, 1.3, x, 9.1, z, terraceGreen);
+    }
+    const canopy = this.box(parent, 13, .28, 6, -13, 5.1, 39, this.bronze); canopy.rotation.y = -.07;
+    this.box(parent, 12.7, .06, 5.7, -13, 4.93, 39, this.warm, false);
+    for (const x of [-19, -7]) this.box(parent, .16, 4.9, .16, x, 2.45, 41, this.metal);
+    // Interior/bollard fixtures illuminate nearby geometry; no expensive point-light shadow maps.
+    for (const x of [-50, -25, 0, 21]) {
+      const light = new THREE.PointLight(0xffd59b, 28, 23, 2);
+      light.position.set(x, 4, 36); parent.add(light);
+      this.lightPool(parent, x, 39, 9);
+    }
+    const signCanvas = document.createElement('canvas'); signCanvas.width = 512; signCanvas.height = 128;
+    const ctx = signCanvas.getContext('2d')!; ctx.fillStyle = '#183b50'; ctx.fillRect(0, 0, 512, 128);
+    ctx.fillStyle = '#e7efec'; ctx.font = '32px Microsoft YaHei'; ctx.textAlign = 'center'; ctx.fillText('云境 · 商业中心', 256, 62);
+    ctx.font = '14px sans-serif'; ctx.fillText('YUNJING  COMMERCIAL  CENTRE', 256, 97);
+    this.box(parent, 9, 2.2, .16, -12, 6.65, 37.8, new THREE.MeshBasicMaterial({ map: this.texture(signCanvas) }), false);
+  }
   private vegetation(parent: THREE.Group) {
-    const leaves: number[][] = [], trunks: number[][] = [], branches: number[][] = [], colors: THREE.Color[] = [];
-    const trees: [number, number][] = [];
-    for (let i = 0; i < 16; i++) trees.push([-61 + i * 7.4, 37]);
-    for (let i = 0; i < 13; i++) trees.push([48, -48 + i * 6.4]);
-    for (let i = 0; i < 8; i++) trees.push([-58, -35 + i * 8]);
+    const trunks: number[][] = [], trees: [number, number][] = [];
+    for (let i = 0; i < 15; i++) trees.push([-59 + i * 7.5, 40 + Math.sin(i * .7) * 2]);
+    for (let i = 0; i < 12; i++) trees.push([49, -49 + i * 7]);
+    for (let i = 0; i < 7; i++) trees.push([-66, -35 + i * 9]);
+    for (let i = 0; i < 7; i++) trees.push([-48 + i * 13, 44 + noise(i) * 3]);
+    const leafGeometry = new THREE.PlaneGeometry(.95, 2.2);
+    const uv = leafGeometry.getAttribute('uv');
+    // Only the three leafy sprays on the left of the atlas; exclude its solid stem strip.
+    for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * .42);
+    const cardsPerTree = 88, cards = new THREE.InstancedMesh(leafGeometry, this.foliage, trees.length * cardsPerTree);
+    const transform = new THREE.Object3D();
+    const bark = new THREE.MeshStandardMaterial({ color: 0x61583f, roughness: 1 });
+    const twigGeometry = new THREE.CylinderGeometry(.045, .12, 1, 5);
     trees.forEach(([x, z], i) => {
-      const size = .75 + noise(i + 45) * .5, ht = 3.2 * size;
-      trunks.push([x, ht / 2, z, .23 * size, ht, .23 * size]);
-      for (let j = 0; j < 5; j++) branches.push([x + Math.cos(j * 1.7) * .6, ht - .4, z + Math.sin(j * 1.7) * .6, .12, 1.8, .12, j]);
-      for (let j = 0; j < 26; j++) {
-        const a = j * 2.4, r = Math.sqrt(noise(i * 69 + j)) * 2.5 * size;
-        const sy = .8 + noise(j * 13 + i) * .8;
-        leaves.push([x + Math.cos(a) * r, ht + .5 + noise(j * 17 + i) * 2.8 * size, z + Math.sin(a) * r, .85 * size, sy * size, .9 * size, a]);
-        colors.push(new THREE.Color().setHSL(.23 + noise(i + j * 31) * .08, .42 + noise(j) * .28, .12 + noise(j + i) * .12));
+      const size = .82 + noise(i + 45) * .47, ht = 3.2 * size, radius = 2.3 * size;
+      trunks.push([x, ht / 2, z, .25 * size, ht, .25 * size]);
+      for (let j = 0; j < 6; j++) {
+        const a = j * 2.4;
+        const branch = new THREE.Mesh(twigGeometry, bark);
+        branch.position.set(x + Math.cos(a) * .65, ht + .15, z + Math.sin(a) * .65);
+        branch.rotation.set(Math.cos(a) * .75, 0, Math.sin(a) * .75); branch.scale.y = 2.1 * size; parent.add(branch);
+      }
+      for (let j = 0; j < cardsPerTree; j++) {
+        const a = j * 2.399, r = radius * Math.sqrt(noise(i * 333 + j));
+        const crown = Math.sqrt(1 - Math.min(.98, (r / radius) ** 2));
+        transform.position.set(x + Math.cos(a) * r, ht + .25 + crown * 1.9 * size + (noise(j * 73 + i) - .5) * 1.4, z + Math.sin(a) * r);
+        transform.rotation.set((noise(j * 7) - .5) * Math.PI, a, (noise(j * 17) - .5) * 1.8);
+        transform.scale.setScalar(.65 + noise(j + i * 13) * .75); transform.updateMatrix();
+        cards.setMatrixAt(i * cardsPerTree + j, transform.matrix);
+        cards.setColorAt(i * cardsPerTree + j, new THREE.Color().setHSL(.18 + noise(j + i) * .06, .26, .48 + noise(j * 3) * .2));
       }
     });
-    this.batch(parent, trunks, new THREE.MeshStandardMaterial({ color: 0x5a5140, roughness: 1 }), new THREE.CylinderGeometry(.5, .65, 1, 7), true);
-    this.batch(parent, branches, new THREE.MeshStandardMaterial({ color: 0x60563f, roughness: 1 }));
-    const canopy = this.batch(parent, leaves, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .95 }), new THREE.IcosahedronGeometry(1, 1), true);
-    colors.forEach((color, i) => canopy.setColorAt(i, color));
-    const hedges: number[][] = [];
-    for (let i = 0; i < 100; i++) hedges.push([-61 + i * 1.1, .65, 35.2, .9, .65 + noise(i) * .3, .75]);
-    this.batch(parent, hedges, new THREE.MeshStandardMaterial({ color: 0x3c5a34, roughness: 1 }), new THREE.IcosahedronGeometry(1, 1));
+    this.batch(parent, trunks, bark, new THREE.CylinderGeometry(.5, .7, 1, 7), true);
+    // Alpha-tested cards cast cut-out shadows, and remain real geometry in every orbit direction.
+    cards.castShadow = true; cards.receiveShadow = true; parent.add(cards);
+    // Small pedestrian silhouettes establish scale without obscuring the plaza.
+    const bodies: number[][] = [], heads: number[][] = [];
+    for (let i = 0; i < 24; i++) {
+      const x = -50 + noise(i * 19) * 91, z = 33 + noise(i * 23 + 2) * 15;
+      bodies.push([x, .75, z, .32, .95, .25]); heads.push([x, 1.43, z, .2, .2, .2]);
+    }
+    this.batch(parent, bodies, new THREE.MeshStandardMaterial({ color: 0x8b9a9e, roughness: 1 }));
+    this.batch(parent, heads, new THREE.MeshStandardMaterial({ color: 0xb7a68e, roughness: 1 }), new THREE.SphereGeometry(.5, 6, 4));
   }
   private car(parent: THREE.Group, x: number, z: number, seed: number, angle = 0) {
     const g = new THREE.Group(); g.position.set(x, -.6, z); g.rotation.y = angle; parent.add(g);
@@ -274,9 +361,9 @@ export class Architecture {
       this.box(g, 13, h, 17, 0, h / 2, 0, [mat, mat, this.dark, this.dark, mat, mat]);
       const bars: number[][] = [];
       for (let f = 0; f <= h; f += 3.7) { bars.push([0, f, 8.53, 13, .045, .06]); bars.push([6.53, f, 0, .06, .045, 17]); }
-      this.batch(g, bars, this.metal);
+      this.batch(g, bars, new THREE.MeshStandardMaterial({ color: 0x314451, roughness: .55, metalness: .2 }));
       this.box(g, 10, 2, 12, 0, h + 1, 0, this.dark);
     }
   }
-  dispose() { this.textures.forEach(texture => texture.dispose()); }
+  dispose() { this.disposed = true; this.textures.forEach(texture => texture.dispose()); }
 }

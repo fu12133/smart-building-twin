@@ -8,7 +8,10 @@ test('production assets and model interactions work under repository URL', async
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('response', r => { if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`); });
+  const assets = ['night-city.hdr', 'leaves-color.jpg', 'leaves-alpha.png'];
+  const assetResponses = Promise.all(assets.map(name => page.waitForResponse(r => r.url() === new URL('assets/' + name, baseURL!).href)));
   await page.goto(baseURL!);
+  for (const response of await assetResponses) expect(response.status(), response.url()).toBe(200);
   await expect(page.getByRole('heading', { name: '智慧楼宇综合管理平台' })).toBeVisible();
   const canvas = page.locator('.scene-host canvas');
   await expect(canvas).toBeVisible();

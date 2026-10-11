@@ -1,0 +1,5 @@
+- [x] Establish night light hierarchy, reflective facade and brighter fine mullions.
+- [x] Rebuild podium/landscape and introduce detailed foliage.
+- [x] Implement immersive desktop composition with usable overlays and responsive fallbacks.
+- [x] Verify controls, GPU lifecycle, default/close/reverse visual quality and production assets.
+- [ ] Record actual evidence, archive and publish to the existing GitHub Pages site.

@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { buildings, devices } from './data';
 import { Architecture } from './architecture';
 
@@ -34,6 +39,11 @@ export class BuildingScene {
   private disposables: (() => void)[] = [];
   private architecture: Architecture;
   private environmentTarget: THREE.WebGLRenderTarget;
+  private composer: EffectComposer;
+  private bloom: UnrealBloomPass;
+  private output: OutputPass;
+  private hdrSettled = false;
+  private hdrSource: THREE.DataTexture;
 
   constructor(private host: HTMLDivElement, private options: Options) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -41,17 +51,39 @@ export class BuildingScene {
     this.renderer.setClearColor(0x081b2d);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.02;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
     this.renderer.shadowMap.needsUpdate = true;
-    this.architecture = new Architecture(this.renderer);
+    this.architecture = new Architecture(this.renderer, () => {
+      this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
+    });
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.environmentTarget = pmrem.fromEquirectangular(this.architecture.environment());
     this.scene.environment = this.environmentTarget.texture;
     this.scene.background = this.architecture.background();
     pmrem.dispose();
+    this.hdrSource = new HDRLoader().load(import.meta.env.BASE_URL + 'assets/night-city.hdr', texture => {
+      if (this.destroyed) { texture.dispose(); return; }
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      const generator = new THREE.PMREMGenerator(this.renderer);
+      const target = generator.fromEquirectangular(texture);
+      this.environmentTarget.dispose(); this.environmentTarget = target;
+      this.scene.environment = target.texture; this.scene.environmentIntensity = .24;
+      generator.dispose(); texture.dispose(); this.hdrSettled = true; this.renderDirty = true;
+    }, undefined, () => {
+      if (!this.destroyed) { this.hdrSettled = true; this.renderDirty = true; }
+      // Retain the procedural reflection environment on a failed optional asset.
+    });
+    const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: Math.min(4, this.renderer.capabilities.maxSamples) });
+    this.composer = new EffectComposer(this.renderer, target);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .14, .2, 1.65);
+    this.composer.addPass(this.bloom);
+    this.output = new OutputPass(); this.composer.addPass(this.output);
+    // Include scene and postprocessing triangles in the read-only verification counter.
+    this.renderer.info.autoReset = false;
     const canvas = this.renderer.domElement;
     canvas.setAttribute('aria-label', '可旋转的楼宇三维模型');
     canvas.tabIndex = 0;
@@ -59,18 +91,20 @@ export class BuildingScene {
     this.labels = document.createElement('div');
     this.labels.className = 'scene-labels';
     host.appendChild(this.labels);
-    this.scene.fog = new THREE.FogExp2(0x17364b, 0.0023);
-    this.scene.add(new THREE.HemisphereLight(0xc4dfff, 0x32342b, 1.1));
-    const key = new THREE.DirectionalLight(0xffe2b6, 2.6);
-    key.position.set(-45, 150, 70);
+    this.scene.fog = new THREE.FogExp2(0x102f4c, 0.0028);
+    this.scene.add(new THREE.HemisphereLight(0x9dc4e5, 0x25251c, .62));
+    const key = new THREE.DirectionalLight(0xffe8c1, 1.35);
+    key.position.set(-45, 100, 75);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     Object.assign(key.shadow.camera, { left: -110, right: 110, top: 125, bottom: -100, near: 1, far: 350 });
     key.shadow.normalBias = .12; key.shadow.bias = -.00015;
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x6daeff, 1.5);
+    const rim = new THREE.DirectionalLight(0x6daeff, .65);
     rim.position.set(-70, 50, -70);
     this.scene.add(rim);
+    const skyFill = new THREE.DirectionalLight(0x94c5f2, 1.2);
+    skyFill.position.set(80, 90, 30); this.scene.add(skyFill);
     this.scene.add(this.city, this.floorMap);
     this.floorMap.visible = false;
     this.city.add(this.surroundings, this.markers);
@@ -201,9 +235,9 @@ export class BuildingScene {
     this.clearMomentum();
     const auto = this.controls.autoRotate; this.controls.autoRotate = false;
     this.controls.enableDamping = false;
-    const fit = Math.max(1.12, Math.min(1.85, 1.12 / this.camera.aspect));
-    this.camera.position.set(...(this.mode === '3d' ? [158 * fit, 39 + 85 * fit, 185 * fit] : [42 * fit, 62 * fit, 58 * fit]) as [number, number, number]);
-    this.controls.target.set(0, this.mode === '3d' ? 39 : 0, 0); this.controls.update();
+    const fit = Math.max(1, Math.min(1.85, 1.05 / this.camera.aspect));
+    this.camera.position.set(...(this.mode === '3d' ? [154 * fit, 48 + 72 * fit, 179 * fit] : [42 * fit, 62 * fit, 58 * fit]) as [number, number, number]);
+    this.controls.target.set(0, this.mode === '3d' ? 48 : 0, 0); this.controls.update();
     this.controls.enableDamping = true; this.controls.autoRotate = auto;
   }
   zoom(factor: number) {
@@ -234,6 +268,7 @@ export class BuildingScene {
     const w = this.host.clientWidth, h = this.host.clientHeight;
     if (!w || !h) return;
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h);
+    this.composer.setSize(w, h);
     this.renderDirty = true;
     if (this.frame === 0 && this.controls) this.reset();
   }
@@ -242,7 +277,7 @@ export class BuildingScene {
     this.controls.update(this.lastTime ? Math.min((time - this.lastTime) / 1000, 0.05) : 1 / 60); this.lastTime = time;
     // Static architecture needs no repeated GPU work. Controls still tick for smooth damping/patrol.
     if (this.renderDirty) {
-      this.renderer.render(this.scene, this.camera); this.frame++;
+      this.renderer.info.reset(); this.composer.render(); this.frame++;
       this.renderDirty = false;
     }
     for (const label of this.labelNodes) {
@@ -254,7 +289,7 @@ export class BuildingScene {
     }
     this.frameId = requestAnimationFrame(this.animate);
   };
-  snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible }; }
+  snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, assetsReady: this.hdrSettled && this.architecture.assetsReady }; }
   dispose() {
     this.destroyed = true; cancelAnimationFrame(this.frameId); this.observer.disconnect(); this.controls.dispose(); this.disposables.forEach(fn => fn());
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
@@ -268,6 +303,8 @@ export class BuildingScene {
     geometries.forEach(geometry => geometry.dispose()); materials.forEach(material => material.dispose());
     this.scene.traverse(obj => { if (obj instanceof THREE.DirectionalLight || obj instanceof THREE.SpotLight || obj instanceof THREE.PointLight) obj.shadow.dispose(); });
     this.environmentTarget.dispose(); this.architecture.dispose();
+    this.hdrSource.dispose();
+    this.bloom.dispose(); this.output.dispose(); this.composer.dispose();
     this.renderer.dispose(); this.renderer.domElement.remove(); this.labels.remove();
   }
 }
