@@ -4,6 +4,16 @@ Result: passed for the implemented local demo scope.
 
 GitHub Pages 发布与公网验证另见 [release.md](release.md)。
 
+## 2026-10-12 architectural rendering enhancement
+
+The visual enhancement replaces flat blue blocks with continuous four-sided curtain walls, procedural 1024×2048 facade/interior maps, physical glass clearcoat and PMREM sky/city reflections. Instanced mullions and fins retain detail while orbiting. The model adds crown lighting, rooftop HVAC/fans, entrance canopies/steps, terraced stone podiums, skylights, planted roofs, layered tree crowns, hedges, benches, lamp pools, cars and road markings. A directional shadow map is refreshed only when static scene visibility changes. Geometry, shared materials, instance buffers, procedural textures and environment/shadow render targets are disposed on scene destruction.
+
+Validation: full interaction harness **9 / 9 passed (1.8 min)** on Windows Edge + SwiftShader. After the final instance-buffer cleanup adjustment, the context-loss/recovery scenario passed again (**1 / 1, 13.3 s**). Strict OpenSpec validation passed for all three baselines and the change. The `/smart-building-twin/` production build passed TypeScript and Vite bundling.
+
+Visual inspection covers desktop default/rotated, phone, zoomed facade and reverse-angle screenshots. Default and rotated views show detailed glass on different sides, illuminated rooms, white framing, rooftop detail and landscaped ground; zoom retains visible framing and interior detail. Floor/device interactions remain usable. The 1600×1000 visual capture includes the complete dashboard; the standard 1440×900 harness asserts panel bounds. Hardware GPU frame rate remains unmeasured; these software-rendered tests validate behavior, not a claim of 60 FPS. The model is more detailed but remains procedural, without the source building's surveyed geometry or photoreal production assets.
+
+Additional reproducible evidence: `node harness/capture-architecture.mjs` generates `architecture-overview.png`, `architecture-closeup.png` and `architecture-reverse.png` under `artifacts/harness/`, using only actual wheel/pointer controls and checking for browser errors.
+
 ## Automated evidence
 
 `npm run build` passed TypeScript validation and production bundling. `npm run spec:validate` passed OpenSpec strict validation. `npm run harness` passed **9 / 9** acceptance tests in **20.8 s**, using Microsoft Edge headless + SwiftShader on Windows. The final run produced no unexpected browser console errors or uncaught exceptions.

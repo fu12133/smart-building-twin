@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildings, devices } from './data';
+import { Architecture } from './architecture';
 
 type Options = { onSelect: (id: string) => void; onDevice: (id: string) => void; onError: (error: string) => void };
 export class BuildingScene {
@@ -30,14 +31,26 @@ export class BuildingScene {
   private labelNodes: { element: HTMLButtonElement; position: THREE.Vector3; floorOnly: boolean }[] = [];
   private labels: HTMLDivElement;
   private disposables: (() => void)[] = [];
+  private architecture: Architecture;
+  private environmentTarget: THREE.WebGLRenderTarget;
 
   constructor(private host: HTMLDivElement, private options: Options) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.setClearColor(0x081b2d);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.4;
+    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = false;
+    this.renderer.shadowMap.needsUpdate = true;
+    this.architecture = new Architecture(this.renderer);
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.environmentTarget = pmrem.fromEquirectangular(this.architecture.environment());
+    this.scene.environment = this.environmentTarget.texture;
+    this.scene.background = this.architecture.background();
+    pmrem.dispose();
     const canvas = this.renderer.domElement;
     canvas.setAttribute('aria-label', '可旋转的楼宇三维模型');
     canvas.tabIndex = 0;
@@ -45,12 +58,16 @@ export class BuildingScene {
     this.labels = document.createElement('div');
     this.labels.className = 'scene-labels';
     host.appendChild(this.labels);
-    this.scene.fog = new THREE.FogExp2(0x081b2d, 0.0026);
-    this.scene.add(new THREE.HemisphereLight(0xb3dcff, 0x19313c, 2.4));
-    const key = new THREE.DirectionalLight(0xbce2ff, 4);
-    key.position.set(50, 120, 60);
+    this.scene.fog = new THREE.FogExp2(0x17364b, 0.0023);
+    this.scene.add(new THREE.HemisphereLight(0xc4dfff, 0x32342b, 1.1));
+    const key = new THREE.DirectionalLight(0xffe2b6, 2.6);
+    key.position.set(-45, 150, 70);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    Object.assign(key.shadow.camera, { left: -110, right: 110, top: 125, bottom: -100, near: 1, far: 350 });
+    key.shadow.normalBias = .12; key.shadow.bias = -.00015;
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x168dff, 3);
+    const rim = new THREE.DirectionalLight(0x6daeff, 1.5);
     rim.position.set(-70, 50, -70);
     this.scene.add(rim);
     this.scene.add(this.city, this.floorMap);
@@ -93,65 +110,20 @@ export class BuildingScene {
     line.position.set(x, y, z); parent.add(line);
   }
   private createCity() {
-    this.box(this.city, 143, 2.4, 115, 0, -1.8, 0, 0x1b3243);
-    this.lineBox(this.city, 145, 0.3, 117, 0, -0.35, 0, 0x24759a, 0.65);
-    this.box(this.city, 141, 0.4, 16, 0, -0.35, 47, 0x102333);
-    this.box(this.city, 13, 0.4, 112, 62, -0.35, 0, 0x102333);
-    for (let x = -65; x < 62; x += 9) this.box(this.city, 4, 0.08, 0.5, x, 0, 48, 0x7695a4);
-    for (let z = -48; z < 50; z += 9) this.box(this.city, 0.5, 0.08, 4, 62, 0, z, 0x7695a4);
+    this.architecture.ground(this.city);
     for (const b of buildings) {
       const tower = new THREE.Group(); tower.position.set(b.x, 0, b.z); tower.userData.building = b.id;
       this.city.add(tower); this.towers.set(b.id, tower);
-      this.box(tower, b.width + 5, 4, b.depth + 5, 0, 2, 0, 0x6d8391);
-      this.box(tower, b.width, b.height, b.depth, 0, b.height / 2 + 4, 0, b.id === 'A' ? 0x245574 : 0x1b3d58);
-      this.box(tower, b.width + 0.4, 2.4, b.depth + 0.4, 0, b.height + 5, 0, 0x8cc2dc, 0x235877);
-      this.box(tower, b.width * 0.7, 4, b.depth * 0.7, 0, b.height + 8, 0, 0x163d57);
-      const rows = b.floors;
-      for (let f = 0; f <= rows; f++) this.lineBox(tower, b.width + 0.12, 0.08, b.depth + 0.12, 0, 4 + f * b.height / rows, 0, 0x78a3bb, b.id === 'A' ? 0.68 : 0.35);
-      for (let col = -b.width / 2; col <= b.width / 2; col += 3) this.box(tower, 0.14, b.height, b.depth + 0.15, col, 4 + b.height / 2, 0, 0x6b95b0);
-      for (let col = -b.depth / 2; col <= b.depth / 2; col += 3) this.box(tower, b.width + 0.15, b.height, 0.14, 0, 4 + b.height / 2, col, 0x527f9e);
-      const lit = new THREE.InstancedMesh(new THREE.PlaneGeometry(2.5, 2.5), new THREE.MeshBasicMaterial({ color: 0xffde99, transparent: true, opacity: 0.85, side: THREE.DoubleSide }), rows * 6);
-      const temp = new THREE.Object3D(); let n = 0;
-      for (let f = 0; f < rows; f++) for (let c = 0; c < 6; c++) {
-        if ((f * 13 + c * 7 + b.height) % 11 > 3) continue;
-        temp.position.set(-b.width / 2 + 2 + c * 3, 5.7 + f * b.height / rows, b.depth / 2 + 0.11);
-        temp.rotation.set(0, 0, 0); temp.updateMatrix(); lit.setMatrixAt(n++, temp.matrix);
-      }
-      lit.count = n; tower.add(lit);
-      const ring = new THREE.Mesh(new THREE.RingGeometry(17, 17.35, 80), new THREE.MeshBasicMaterial({ color: 0x4adcf3, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }));
-      ring.rotation.x = -Math.PI / 2; ring.position.y = 0.25; tower.add(ring); this.rings.set(b.id, ring);
-      this.addLabel(b.id + '座', new THREE.Vector3(b.x, b.height + 16, b.z), false, () => this.options.onSelect(b.id), 'building-label');
+      this.architecture.tower(tower, b);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(17, 17.22, 96), new THREE.MeshBasicMaterial({ color: 0x4adcf3, side: THREE.DoubleSide, transparent: true, opacity: .7 }));
+      ring.rotation.x = -Math.PI / 2; ring.position.y = .08; tower.add(ring); this.rings.set(b.id, ring);
+      this.addLabel(b.id + '座', new THREE.Vector3(b.x, b.height + 11, b.z), false, () => this.options.onSelect(b.id), 'building-label');
     }
-    // Low-rise commercial podium, public square and entrance lights.
-    this.box(this.city, 78, 9, 17, -10, 4.5, 25, 0x567b8a);
-    this.box(this.city, 24, 9, 29, -48, 4.5, 10, 0x466f80);
-    this.box(this.city, 78.7, 0.55, 17.7, -10, 9.4, 25, 0xffd99d, 0xbb8744);
-    for (let x = -48; x < 27; x += 3) this.box(this.city, 0.16, 7, 17.2, x, 4.5, 25, 0xc7d9d8);
-    this.box(this.city, 10, 6, 0.3, -10, 3, 33.7, 0x72d9e4, 0x247789);
-    for (let i = 0; i < 28; i++) {
-      const x = i < 14 ? -62 + i * 8.6 : 49;
-      const z = i < 14 ? 37 : -49 + (i - 14) * 6.8;
-      this.tree(x, z);
-    }
-    const plaza = new THREE.Mesh(new THREE.CircleGeometry(11, 60), new THREE.MeshStandardMaterial({ color: 0x466575, roughness: 0.8 }));
-    plaza.rotation.x = -Math.PI / 2; plaza.position.set(16, 0.05, 24); this.city.add(plaza);
-    for (let i = 0; i < 10; i++) {
-      const x = -70 + i * 17, z = -75 - (i % 3) * 18, h = 28 + (i * 19 % 65);
-      this.box(this.surroundings, 13, h, 17, x, h / 2, z, 0x0f293f);
-      for (let f = 5; f < h; f += 5) this.lineBox(this.surroundings, 13, 0.02, 17, x, f, z, 0x23516b, 0.6);
-      this.lineBox(this.surroundings, 13, h, 17, x, h / 2, z, 0x335b72, 0.4);
-    }
-    const grid = new THREE.GridHelper(700, 70, 0x153b55, 0x10283c); grid.position.y = -3; this.city.add(grid);
+    this.architecture.context(this.surroundings);
     for (let i = 0; i < 6; i++) {
-      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.4, 16), new THREE.MeshBasicMaterial({ color: i === 2 ? 0xffaa64 : 0x40e5d4 }));
-      p.position.set(-33 + i * 15, 0.5, 36); this.markers.add(p);
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .3, 16), new THREE.MeshBasicMaterial({ color: i === 2 ? 0xffaa64 : 0x40e5d4 }));
+      p.position.set(-33 + i * 15, .5, 36); this.markers.add(p);
     }
-  }
-  private tree(x: number, z: number) {
-    this.box(this.city, 4.4, 0.25, 4.4, x, 0, z, 0x294d45);
-    this.box(this.city, 0.5, 3.2, 0.5, x, 1.6, z, 0x7a7968);
-    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(2.7, 1), new THREE.MeshStandardMaterial({ color: 0x467d69, roughness: 0.9 }));
-    crown.position.set(x, 4, z); crown.scale.y = 1.3; this.city.add(crown);
   }
   private addLabel(text: string, position: THREE.Vector3, floorOnly: boolean, action: () => void, className: string) {
     const element = document.createElement('button'); element.textContent = text; element.className = className;
@@ -192,6 +164,7 @@ export class BuildingScene {
       this.controls.minDistance = 55; this.controls.maxDistance = 520;
     }
     this.mode = mode; this.city.visible = mode === '3d'; this.floorMap.visible = mode === 'floor';
+    this.renderer.shadowMap.needsUpdate = true;
     this.controls.autoRotate = this.auto && mode === '3d'; this.controls.update();
   }
   private clearMomentum() {
@@ -207,13 +180,13 @@ export class BuildingScene {
   setFloor(floor: number) { this.floor = floor; }
   setLayers(showDevices: boolean, showSurroundings: boolean) {
     this.markers.visible = showDevices; this.surroundings.visible = showSurroundings;
+    this.renderer.shadowMap.needsUpdate = true;
     for (const label of this.labelNodes) if (label.floorOnly) label.element.dataset.hiddenLayer = String(!showDevices);
     for (const mesh of this.floorMap.children) if (mesh.userData.device) mesh.visible = showDevices;
   }
   select(id: string) {
     this.selected = id;
     this.rings.forEach((ring, key) => { ring.visible = id === key; });
-    this.towers.forEach((tower, key) => { tower.traverse(obj => { if (obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshStandardMaterial && obj.geometry instanceof THREE.BoxGeometry && obj.geometry.parameters.height > 50) { obj.material.emissive.set(key === id ? 0x093348 : 0x000000); } }); });
     for (const label of this.labelNodes) if (!label.floorOnly) label.element.classList.toggle('selected', label.element.textContent === id + '座');
   }
   reset() {
@@ -271,7 +244,17 @@ export class BuildingScene {
   snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible }; }
   dispose() {
     this.destroyed = true; cancelAnimationFrame(this.frameId); this.observer.disconnect(); this.controls.dispose(); this.disposables.forEach(fn => fn());
-    this.scene.traverse(obj => { if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) { obj.geometry.dispose(); const mats = Array.isArray(obj.material) ? obj.material : [obj.material]; mats.forEach(m => m.dispose()); } });
+    const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
+    this.scene.traverse(obj => {
+      if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) {
+        geometries.add(obj.geometry);
+        (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(material => materials.add(material));
+        if (obj instanceof THREE.InstancedMesh) obj.dispose();
+      }
+    });
+    geometries.forEach(geometry => geometry.dispose()); materials.forEach(material => material.dispose());
+    this.scene.traverse(obj => { if (obj instanceof THREE.DirectionalLight || obj instanceof THREE.SpotLight || obj instanceof THREE.PointLight) obj.shadow.dispose(); });
+    this.environmentTarget.dispose(); this.architecture.dispose();
     this.renderer.dispose(); this.renderer.domElement.remove(); this.labels.remove();
   }
 }
