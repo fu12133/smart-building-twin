@@ -15,7 +15,8 @@ export default defineConfig({
     channel: process.platform === 'win32' && !process.env.CI ? 'msedge' : undefined,
     launchOptions: { args: ['--use-angle=swiftshader'] },
     screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
+    // Explicit canvas screenshots provide visual evidence; avoid a second continuous GPU screencast.
+    trace: { mode: 'retain-on-failure', screenshots: false, snapshots: true, sources: true },
   },
   webServer: { command: 'npm run dev', url: 'http://127.0.0.1:4187', reuseExistingServer: !process.env.CI, timeout: 30000 },
 });

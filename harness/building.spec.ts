@@ -21,6 +21,8 @@ async function ready(page: Page) {
 }
 
 test('V1: real pointer rotation changes camera and rendered image', async ({ page }) => {
+  // Cold SwiftShader compilation + three explicit screenshots are not an interaction-latency benchmark.
+  test.setTimeout(process.env.CI ? 90000 : 45000);
   await ready(page);
   const canvas = page.locator('.scene-host canvas');
   const before = await snapshot(page);
