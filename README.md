@@ -50,6 +50,7 @@ npm run harness
 - Playwright 自动启动开发服务器，已有正确预览时复用；CI 设置 `CI=1` 时强制启动独立服务器。
 
 验证记录见 [docs/verification.md](docs/verification.md)。
+公网发布与复验记录见 [docs/release.md](docs/release.md)。
 
 ## 数据和资产边界
 

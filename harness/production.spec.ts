@@ -31,6 +31,7 @@ test('production assets and model interactions work under repository URL', async
   await page.getByRole('button', { name: '能源分析', exact: true }).click();
   await expect(page.getByRole('heading', { name: '今日用电趋势' })).toBeVisible();
   await page.getByRole('button', { name: '园区总览', exact: true }).click();
+  await page.waitForTimeout(1200); // Let ECharts' entrance animation finish before capturing evidence.
   mkdirSync('artifacts/harness', { recursive: true });
   await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/production-online.png' : 'artifacts/harness/production-local.png' });
   expect(errors, 'Production console errors').toEqual([]);

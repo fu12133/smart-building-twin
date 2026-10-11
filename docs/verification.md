@@ -2,6 +2,8 @@
 
 Result: passed for the implemented local demo scope.
 
+GitHub Pages 发布与公网验证另见 [release.md](release.md)。
+
 ## Automated evidence
 
 `npm run build` passed TypeScript validation and production bundling. `npm run spec:validate` passed OpenSpec strict validation. `npm run harness` passed **9 / 9** acceptance tests in **20.8 s**, using Microsoft Edge headless + SwiftShader on Windows. The final run produced no unexpected browser console errors or uncaught exceptions.
