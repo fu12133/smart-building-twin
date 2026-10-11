@@ -2,6 +2,19 @@
 
 已发布并通过公网浏览器验收。
 
+## 2026-10-12 建筑画质增强发布
+
+- 已部署应用源码提交：`620ac962ad8cc6371bbab967635ab5396d5f3244`。
+- 成功工作流：[38161433088](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38161433088)。Linux + Chromium + SwiftShader 下 **10 / 10 passed (2.9 min)**，构建 3m35s，部署 11s。
+- 公网 HTML 实际引用增强版产物 `index-Cbn2cQVL.js`，已核对，使用地址保持不变。
+- 在真实 HTTPS 地址执行生产 harness：**1 / 1 passed (16.4 s)**。实际画布拖拽、楼层/设备、导航及视角复位通过；观察到的资源无 HTTP 错误，控制台无错误，开发诊断入口未暴露。
+- 本地仓库子路径生产验收另通过 **1 / 1 (15.5 s)**。
+- 线上截图 `artifacts/harness/production-online.png` 已检查；线上近景与旋转截图由 `PRODUCTION_URL=站点地址 node harness/capture-architecture.mjs` 再次捕获。
+
+新模型包括四面玻璃幕墙、物理反射、办公室照明、屋顶机组、石材裙楼与入口、道路车辆、路灯和分层植被。静止时不重复 GPU 绘制，操作或巡航时刷新。它依然是参数化演示资产，未使用参考建筑的原始 BIM。
+
+发布证据与截图的后续提交仅更新文档/图片，可使用 `[skip ci]`；线上应用仍是上面已通过全部检查的提交与产物。
+
 - 公开源码：https://github.com/guangfubill-crypto/smart-building-twin
 - HTTPS 使用地址：https://guangfubill-crypto.github.io/smart-building-twin/
 - 初次部署证据：https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38154702834
