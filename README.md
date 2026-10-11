@@ -58,7 +58,7 @@ npm run harness
 
 真实项目接入时，用 BIM 导出的 glTF/GLB 资产替换 `src/architecture.ts` 中的参数化生成部分，并以稳定的楼栋、楼层、房间与设备 ID 关联实际 IoT 数据。无需改变 OrbitControls 交互及两种视图的状态管理。当前未实现 BIM 文件上传、IFC 语义解析或实时接口连接。
 
-三维资产包含四面玻璃幕墙、2048 像素立面纹理、分室照明、物理玻璃反射、立体竖向装饰、屋顶机组、商业裙楼与入口雨棚、植被、车辆和道路。纹理及反射环境在本地程序生成，不依赖远端模型或图片。高像素密度设备的渲染倍率上限为 2；阴影仅在场景/图层切换时更新。
+三维资产包含四面玻璃幕墙、2048 像素立面纹理、分室照明、物理玻璃反射、立体竖向装饰、屋顶机组、商业裙楼与入口雨棚、植被、车辆和道路。纹理及反射环境在本地程序生成，不依赖远端模型或图片。高像素密度设备的渲染倍率上限为 2；阴影仅在场景/图层切换时更新。静止视角不重复绘制，操作、巡航或图层变化会刷新模型。
 
 ## 文件分工
 
@@ -71,7 +71,7 @@ npm run harness
 
 ## 自动发布
 
-`.github/workflows/pages.yml` 在每次推送 `main` 时校验 OpenSpec、运行 9 项交互 harness、构建并部署 GitHub Pages。依赖由 `package-lock.json` 锁定；官方 actions 固定 commit SHA。
+`.github/workflows/pages.yml` 在每次推送 `main` 时校验 OpenSpec、运行 10 项交互 harness、构建并部署 GitHub Pages。依赖由 `package-lock.json` 锁定；官方 actions 固定 commit SHA。
 
 Pages 的仓库子路径由 `PAGES_BASE_PATH` 指定。本地开发默认 `/`，继续使用 4187 端口。
 

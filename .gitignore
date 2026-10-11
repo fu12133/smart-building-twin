@@ -6,6 +6,7 @@ playwright-report/
 artifacts/harness/results.json
 artifacts/harness/production-results.json
 harness/artifacts/
+artifacts/ci/
 .env
 .env.*
 *.local

@@ -14,6 +14,12 @@ The 3D scene MUST render multi-face glass curtain walls with reflection response
 ### Requirement: Rendering resource lifecycle
 Generated geometry, materials, textures and reflection render targets MUST be disposed when the scene is destroyed; rendering MUST retain responsive floor switching and graphics recovery.
 
+An idle scene MUST avoid continuous GPU redraws while camera motion, automatic rotation, viewport and layer changes MUST refresh the rendered view.
+
 #### Scenario: Reinitialize after graphics failure
 - **WHEN** graphics recovery reloads the scene
 - **THEN** the detailed model renders again with working controls and no uncaught browser errors
+
+#### Scenario: Idle rendering and renewed interaction
+- **WHEN** the initial scene is stationary and the user subsequently zooms or hides surrounding buildings
+- **THEN** the idle rendered-frame count stays stable, zoom advances rendered frames, and hiding surroundings changes the rendered background

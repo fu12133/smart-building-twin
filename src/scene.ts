@@ -21,6 +21,7 @@ export class BuildingScene {
   private frameId = 0;
   private lastTime = 0;
   private destroyed = false;
+  private renderDirty = true;
   private mode: '3d' | 'floor' = '3d';
   private selected = 'A';
   private floor = 12;
@@ -76,6 +77,9 @@ export class BuildingScene {
     this.createCity();
     this.createFloor();
     this.controls = new OrbitControls(this.camera, canvas);
+    const invalidate = () => { this.renderDirty = true; };
+    this.controls.addEventListener('change', invalidate);
+    this.disposables.push(() => this.controls.removeEventListener('change', invalidate));
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.09;
     this.controls.minDistance = 55;
@@ -164,6 +168,7 @@ export class BuildingScene {
       this.controls.minDistance = 55; this.controls.maxDistance = 520;
     }
     this.mode = mode; this.city.visible = mode === '3d'; this.floorMap.visible = mode === 'floor';
+    this.renderDirty = true;
     this.renderer.shadowMap.needsUpdate = true;
     this.controls.autoRotate = this.auto && mode === '3d'; this.controls.update();
   }
@@ -180,16 +185,19 @@ export class BuildingScene {
   setFloor(floor: number) { this.floor = floor; }
   setLayers(showDevices: boolean, showSurroundings: boolean) {
     this.markers.visible = showDevices; this.surroundings.visible = showSurroundings;
+    this.renderDirty = true;
     this.renderer.shadowMap.needsUpdate = true;
     for (const label of this.labelNodes) if (label.floorOnly) label.element.dataset.hiddenLayer = String(!showDevices);
     for (const mesh of this.floorMap.children) if (mesh.userData.device) mesh.visible = showDevices;
   }
   select(id: string) {
+    this.renderDirty = true;
     this.selected = id;
     this.rings.forEach((ring, key) => { ring.visible = id === key; });
     for (const label of this.labelNodes) if (!label.floorOnly) label.element.classList.toggle('selected', label.element.textContent === id + '座');
   }
   reset() {
+    this.renderDirty = true;
     this.clearMomentum();
     const auto = this.controls.autoRotate; this.controls.autoRotate = false;
     this.controls.enableDamping = false;
@@ -226,12 +234,17 @@ export class BuildingScene {
     const w = this.host.clientWidth, h = this.host.clientHeight;
     if (!w || !h) return;
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h);
+    this.renderDirty = true;
     if (this.frame === 0 && this.controls) this.reset();
   }
   private animate = (time: number) => {
     if (this.destroyed) return;
     this.controls.update(this.lastTime ? Math.min((time - this.lastTime) / 1000, 0.05) : 1 / 60); this.lastTime = time;
-    this.renderer.render(this.scene, this.camera); this.frame++;
+    // Static architecture needs no repeated GPU work. Controls still tick for smooth damping/patrol.
+    if (this.renderDirty) {
+      this.renderer.render(this.scene, this.camera); this.frame++;
+      this.renderDirty = false;
+    }
     for (const label of this.labelNodes) {
       const p = label.position.clone().project(this.camera);
       const show = label.floorOnly === (this.mode === 'floor') && p.z < 1 && Math.abs(p.x) < 0.97 && Math.abs(p.y) < 0.9 && label.element.dataset.hiddenLayer !== 'true';

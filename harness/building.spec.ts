@@ -16,7 +16,7 @@ test.afterEach(async ({ page }) => { expect(errors.get(page), 'Unexpected browse
 async function ready(page: Page) {
   await page.goto('/');
   await expect(page.locator('.data-source')).toContainText('演示数据');
-  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(5);
+  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(0);
   expect((await snapshot(page)).objects).toBeGreaterThan(1000);
 }
 
@@ -152,5 +152,22 @@ test('V6: lost graphics context produces recovery UI', async ({ page }) => {
   await expect(page.getByRole('button', { name: '重新加载' })).toBeVisible();
   await page.getByRole('button', { name: '重新加载' }).click();
   await expect(page.getByRole('alert')).toBeHidden();
-  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(5);
+  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(0);
+});
+
+test('V7: idle scene stops GPU redraws and controls/layers redraw visible geometry', async ({ page }) => {
+  await ready(page);
+  const idle = await snapshot(page);
+  await page.waitForTimeout(400);
+  expect((await snapshot(page)).frames).toBe(idle.frames);
+  await page.getByRole('button', { name: '放大模型' }).click();
+  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(idle.frames);
+  await page.getByRole('button', { name: '图层设置' }).click();
+  const visible = await snapshot(page);
+  const canvas = page.locator('.scene-host canvas');
+  const before = await canvas.screenshot();
+  await page.getByLabel('周边建筑', { exact: true }).uncheck();
+  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(visible.frames);
+  const after = await canvas.screenshot();
+  expect(createHash('sha256').update(after).digest('hex')).not.toBe(createHash('sha256').update(before).digest('hex'));
 });

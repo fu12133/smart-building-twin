@@ -115,8 +115,8 @@ export class Architecture {
       ctx.fillStyle = '#8c9ca5'; ctx.fillRect(x, y, 2.2, ch); ctx.fillRect(x, y, cw, 1.8);
       ctx.fillStyle = '#0b1d28'; ctx.fillRect(x + cw - 2, y, 2, ch);
     }
-    const material = new THREE.MeshPhysicalMaterial({ map: this.texture(c), emissiveMap: this.texture(e), emissive: 0xffe2a4, emissiveIntensity: subdued ? .4 : .85, metalness: .35, roughness: .19, clearcoat: 1, clearcoatRoughness: .12, envMapIntensity: subdued ? .85 : 1.6 });
-    return material;
+    const parameters = { map: this.texture(c), emissiveMap: this.texture(e), emissive: 0xffe2a4, emissiveIntensity: subdued ? .4 : .85, metalness: .35, roughness: .19, envMapIntensity: subdued ? .85 : 1.6 };
+    return subdued ? new THREE.MeshStandardMaterial(parameters) : new THREE.MeshPhysicalMaterial({ ...parameters, clearcoat: 1, clearcoatRoughness: .12 });
   }
   tower(parent: THREE.Group, b: typeof buildings[number]) {
     const w = b.width, d = b.depth, h = b.height, base = 5.4;
