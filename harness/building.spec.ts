@@ -241,3 +241,14 @@ test('H2: invalid hospital asset shows actionable failure and reload recovers', 
   await expect(page.getByRole('alert')).toBeHidden();
   await expect(page.locator('.scene-host canvas')).toHaveCount(1);
 });
+
+test('H3: hidden source ground does not capture empty-campus building selection', async ({ page }) => {
+  await ready(page);
+  await page.getByRole('button', { name: '选择C座' }).click();
+  const canvas = page.locator('.scene-host canvas');
+  const rect = (await canvas.boundingBox())!;
+  // Empty foreground plaza in the inspected default overview, away from overlays and buildings.
+  await canvas.click({ position: { x: rect.width * .72, y: rect.height * .79 } });
+  expect((await snapshot(page)).selected).toBe('C');
+  await expect(page.locator('.building-name')).toContainText('医技楼');
+});

@@ -11,6 +11,10 @@ The hospital demonstration MUST render locally packaged licensed hospital geomet
 - **WHEN** hospital geometry fails to load or completes after a scene has been reloaded
 - **THEN** failure is actionable, the recreated scene retains one usable renderer, and disposed-scene resources are released
 
+#### Scenario: Hidden source geometry is not selectable
+- **WHEN** the user selects the medical-tech building and clicks the empty campus foreground
+- **THEN** the selection remains on that building, and hidden original ground or institution text does not capture the click
+
 ## MODIFIED Requirements
 
 ### Requirement: Detailed architectural rendering

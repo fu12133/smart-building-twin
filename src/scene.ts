@@ -289,7 +289,10 @@ export class BuildingScene {
     if (e.button !== 0 || this.pointerDown.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) > 5) return;
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.raycaster.setFromCamera(new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1), this.camera);
-    const hit = this.raycaster.intersectObjects(this.mode === '3d' ? [...this.towers.values()] : this.floorMap.children, true)[0];
+    const hit = this.raycaster.intersectObjects(this.mode === '3d' ? [...this.towers.values()] : this.floorMap.children, true).find(candidate => {
+      for (let object: THREE.Object3D | null = candidate.object; object; object = object.parent) if (!object.visible) return false;
+      return true;
+    });
     if (!hit) return;
     let obj: THREE.Object3D | null = hit.object;
     while (obj) { if (obj.userData.building) { this.options.onSelect(obj.userData.building); break; } if (obj.userData.device) { this.options.onDevice(obj.userData.device); break; } obj = obj.parent; }

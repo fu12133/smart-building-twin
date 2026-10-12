@@ -40,6 +40,10 @@ The initial regression passed 10/11 but found a stale alarm target at A/12, outs
 
 Final standalone local harness: **13/13 passed (2.2 min)**, including cross-building alarm A/2, delayed hospital completion after reload, and malformed model recovery. No unexpected browser errors. The visual capture script now waits for the visible hospital-ready state before screenshots. Linux CI and the actual public URL are verified before final release/archiving.
 
+Final manual pointer review reproduced an imported-asset issue: after selecting C, clicking empty foreground incorrectly selected A because hidden source ground still participated in raycasting. Picking now rejects intersections with invisible objects or ancestors, also respecting hidden equipment geometry. H3 repeats this actual foreground click through the canvas; a fresh full regression includes all 14 scenarios. The earlier publishing run was canceled before deployment while this repair was verified.
+
+After the picking repair, the full standalone local harness passed **14/14 (2.7 min)**. H3 passed (7.6 s); the same run passed delayed hospital completion and malformed-model recovery without unexpected browser errors. Final repository-prefix build produced `index-C9VpIb-A.js`, and strict validation passed all three baselines plus the active change.
+
 ## Original automated evidence (initial release)
 
 Cloud run `38214620444` passed **9 / 11 (7.1 min)**. V1 exhausted its 90-second cumulative budget; V8 exhausted the 12-second initial-frame wait before entering the recovery sequence. The harness now distinguishes cold software-GPU initialization (45-second CI wait) from UI assertions (unchanged 12 seconds), captures bounded page clips instead of scrolling the canvas locator, and uses eight real pointer moves over the same displacement. Camera displacement and pixel-change assertions are unchanged. V1/V8 allow 120 seconds for cumulative initialization/captures. Both revised scenarios passed locally **2 / 2 (22.2 s)**. The production application code remains unchanged from `26bcdac`.
