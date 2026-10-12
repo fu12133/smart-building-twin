@@ -32,6 +32,8 @@ Visual inspection checked default, close and reverse angles, floor/device detail
 
 ## Automated evidence
 
+Cloud run `38214620444` passed **9 / 11 (7.1 min)**. V1 exhausted its 90-second cumulative budget; V8 exhausted the 12-second initial-frame wait before entering the recovery sequence. The harness now distinguishes cold software-GPU initialization (45-second CI wait) from UI assertions (unchanged 12 seconds), captures bounded page clips instead of scrolling the canvas locator, and uses eight real pointer moves over the same displacement. Camera displacement and pixel-change assertions are unchanged. V1/V8 allow 120 seconds for cumulative initialization/captures. Both revised scenarios passed locally **2 / 2 (22.2 s)**. The production application code remains unchanged from `26bcdac`.
+
 `npm run build` passed TypeScript validation and production bundling. `npm run spec:validate` passed OpenSpec strict validation. `npm run harness` passed **9 / 9** acceptance tests in **20.8 s**, using Microsoft Edge headless + SwiftShader on Windows. The final run produced no unexpected browser console errors or uncaught exceptions.
 
 | Requirement | Evidence |
