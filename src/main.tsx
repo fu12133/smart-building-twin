@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Activity, ArrowDown, ArrowUpRight, Bell, Building2, Camera, ChevronDown, ChevronRight, CircleHelp, Cpu, Expand, Flame, Layers3, Leaf, MapPin, Maximize2, MousePointer2, Pause, Play, Plus, Minus, RotateCcw, ScanLine, ShieldCheck, Snowflake, Users, X, Zap, LayoutDashboard, Radio, Move3D, Eye, PanelLeftClose } from 'lucide-react';
 import { BuildingScene } from './scene';
-import { buildings, devices, View, viewNames, floorName, floorScope } from './data';
+import { buildings, View, viewNames, floorName, floorScope } from './data';
+import { getFloorLayout } from './floorLayouts';
 import { Chart } from './Chart';
 import './style.css';
 import { deviceSystems, DeviceFilter } from './deviceSystems';
@@ -34,6 +35,7 @@ function App() {
   const [toast, setToast] = useState('');
   const [time, setTime] = useState(new Date());
   const current = buildings.find(b => b.id === building)!;
+  const layout = getFloorLayout(building, floor), devices = layout.devices;
   const selectedDevice = devices.find(d => d.id === device);
   const floors = [...Array.from({ length: current.floors }, (_, i) => i + 1).reverse(), -1, -2];
   useEffect(() => {
@@ -51,8 +53,12 @@ function App() {
     return () => { scene?.dispose(); engine.current = null; delete window.__BUILDING_HARNESS__; };
   }, []);
   useEffect(() => { engine.current?.setMode(mode); setDevice(null); }, [mode]);
-  useEffect(() => { engine.current?.select(building); setFloor(f => Math.max(-2, Math.min(f, current.floors))); }, [building, current.floors]);
-  useEffect(() => { engine.current?.setFloor(floor); setDevice(null); }, [floor]);
+  useEffect(() => {
+    const boundedFloor = Math.max(-2, Math.min(floor, current.floors));
+    engine.current?.select(building); engine.current?.setFloor(boundedFloor);
+    if (boundedFloor !== floor) setFloor(boundedFloor);
+    setDevice(null);
+  }, [building, floor, current.floors]);
   useEffect(() => { engine.current?.setAuto(auto); }, [auto]);
   useEffect(() => { engine.current?.setLayers(deviceLayer, contextLayer); }, [deviceLayer, contextLayer]);
   useEffect(() => { engine.current?.setDeviceFilter(deviceFilter); }, [deviceFilter]);
@@ -84,13 +90,13 @@ function App() {
             <div className="small-stats"><div><strong>1<small>栋</small></strong><span>塔楼＋裙房</span></div><div><strong>28,426<small>m²</small></strong><span>改造面积</span></div><div><strong>18+2<small>层</small></strong><span>地上＋地下</span></div></div>
           </Panel>
           <Panel title={view === 'energy' ? '今日用电趋势' : '今日通行趋势'} icon={view === 'energy' ? Zap : Users} extra={view === 'energy' ? 'kWh' : '人次'}><div className="chart-legend"><span><i/> {view === 'energy' ? '今日用电' : '入院区人数'}</span><span><i className="muted"/>{view === 'energy' ? '昨日用电' : '离院区人数'}</span></div><Chart kind="trend" energy={view === 'energy'}/><div className="trend-bottom"><span>今日累计{view === 'energy' ? '用电' : '通行'}</span><strong>{view === 'energy' ? '8,462' : '4,958'}<small>{view === 'energy' ? 'kWh' : '人次'}</small></strong><span className="positive">{view === 'energy' ? '↓ 8.2%' : '↑ 12.6%'}</span></div></Panel>
-          <Panel title="告警动态" icon={Bell} extra={<span className="warning-count">3 条待关注</span>} className="alarm-panel"><div className="alert-summary"><span className="alert-icon"><Bell size={22}/></span><div><strong>03<span>今日告警</span></strong><small>演示告警 · 设备定位可查看</small></div><span className="alert-tag">待关注</span></div>{[{ title: '烟感探测器异常', place: building + '区 · ' + floorName(floor) + ' · 核心筒东侧', time: '16:58', id: 'SMK-03', color: 'orange' }, { title: '空调温度超出阈值', place: 'A区 · 2F · 核心筒西侧', time: '16:42', id: 'AC-01', color: 'yellow' }, { title: '摄像机离线记录', place: 'A区 · 2F · 公共走廊', time: '16:20', id: 'CAM-02', color: 'blue' }].map(a => <button className="alarm-row" key={a.title} onClick={() => { locateDevice(a.id, a.id === 'SMK-03' ? building : 'A', a.id === 'SMK-03' ? floor : 2); }}><i className={a.color}/><span><strong>{a.title}</strong><small>{a.place}</small></span><time>{a.time}</time><ChevronRight size={12}/></button>)}</Panel>
+          <Panel title="告警动态" icon={Bell} extra={<span className="warning-count">3 条待关注</span>} className="alarm-panel"><div className="alert-summary"><span className="alert-icon"><Bell size={22}/></span><div><strong>03<span>今日告警</span></strong><small>演示告警 · 设备定位可查看</small></div><span className="alert-tag">待关注</span></div>{[{ title: '烟感探测器异常', place: building + '区 · ' + floorName(floor) + ' · ' + devices.find(d => d.id === 'SMK-03')!.room, time: '16:58', id: 'SMK-03', color: 'orange' }, { title: '空调温度超出阈值', place: 'A区 · 2F · ' + getFloorLayout('A', 2).devices.find(d => d.id === 'AC-01')!.room, time: '16:42', id: 'AC-01', color: 'yellow' }, { title: '摄像机离线记录', place: 'A区 · 2F · ' + getFloorLayout('A', 2).devices.find(d => d.id === 'CAM-02')!.room, time: '16:20', id: 'CAM-02', color: 'blue' }].map(a => <button className="alarm-row" key={a.title} onClick={() => { locateDevice(a.id, a.id === 'SMK-03' ? building : 'A', a.id === 'SMK-03' ? floor : 2); }}><i className={a.color}/><span><strong>{a.title}</strong><small>{a.place}</small></span><time>{a.time}</time><ChevronRight size={12}/></button>)}</Panel>
         </div>
         <section className="scene-section" aria-label="院区可视化">
           <div className="scene-top"><div><span className="eyebrow">医院数字孪生</span><h2>{mode === '3d' ? '院区数字孪生' : current.id + '区 · ' + floorName(floor) + ' 电子地图'}</h2></div><div className="mode-switch"><button aria-pressed={mode === '3d'} className={mode === '3d' ? 'active' : ''} onClick={() => setMode('3d')}><Move3D size={13}/>3D 院区</button><button aria-pressed={mode === 'floor'} className={mode === 'floor' ? 'active' : ''} onClick={() => setMode('floor')}><Layers3 size={13}/>2.5D 楼层</button></div></div>
           <div className="scene-host" ref={host} data-testid="scene-host"/>
           {error && <div className="scene-error" role="alert"><Building2 size={32}/><h3>三维场景暂不可用</h3><p>{error}</p><button onClick={() => location.reload()}>重新加载</button></div>}
-          <div className="scene-info"><span className="model-state"><i/> {mode === '3d' ? (hospitalReady ? '医院模型已加载' : '医院模型加载中') : '示意楼层已加载'}</span><span>{mode === '3d' ? '白模形体 / 医疗立面方案' : floorScope(building, floor)}</span>{mode === 'floor' && <span>开放楼板 · 核心筒 · 内部方案示意</span>}</div>
+          <div className="scene-info"><span className="model-state"><i/> {mode === '3d' ? (hospitalReady ? '医院模型已加载' : '医院模型加载中') : '示意楼层已加载'}</span><span>{mode === '3d' ? '白模形体 / 医疗立面方案' : floorScope(building, floor)}</span>{mode === 'floor' && <span aria-label="楼层布局说明">{layout.title} · {layout.rooms.length} 个分区 · 方案示意</span>}</div>
           {mode === 'floor' && <nav className="floor-rail" aria-label="楼层导航"><span>{building}区</span><div ref={floorRail}>{floors.map(f => <button key={f} aria-label={'切换到 ' + floorName(f)} aria-pressed={floor === f} className={floor === f ? 'active' : ''} title={floorScope(building, f)} onClick={() => setFloor(f)}>{floorName(f)}{building === 'A' && [13, 14].includes(f) && <small>保留</small>}</button>)}</div></nav>}
           <div className="scene-controls"><button aria-label="放大模型" title="放大" onClick={() => engine.current?.zoom(0.85)}><Plus size={17}/></button><button aria-label="缩小模型" title="缩小" onClick={() => engine.current?.zoom(1.15)}><Minus size={17}/></button><div className="control-divider"/><button aria-label="复位视角" title="复位视角" onClick={() => engine.current?.reset()}><RotateCcw size={16}/></button><button aria-label="图层设置" title="图层设置" aria-expanded={layersOpen} className={layersOpen ? 'active' : ''} onClick={() => setLayersOpen(!layersOpen)}><Layers3 size={17}/></button></div>
           {layersOpen && <div className="layer-popover"><strong>场景图层</strong><label><input type="checkbox" checked={deviceLayer} onChange={e => setDeviceLayer(e.target.checked)}/>设备点位</label><label><input type="checkbox" checked={contextLayer} onChange={e => setContextLayer(e.target.checked)}/>周边建筑</label></div>}
@@ -112,7 +118,7 @@ function App() {
       </div>
       <footer><span><span className="status-dot"/> 项目方案预览<span className="footer-divider"/>数据刷新：演示快照</span><a className="asset-credit" href={import.meta.env.BASE_URL + 'assets/project-model.json'} target="_blank" rel="noreferrer">模型来源：项目白模.dwg · 按塔楼高度等比校准</a></footer>
     </main>
-    {help && <div className="modal-backdrop" onClick={() => setHelp(false)}><section className="help-dialog" role="dialog" aria-modal="true" aria-label="模型操作帮助" onClick={e => e.stopPropagation()}><button className="dialog-close" aria-label="关闭帮助" onClick={() => setHelp(false)}><X size={19}/></button><Move3D size={31}/><h2>探索你的数字院区</h2><p>模型由真实三维几何组成，可以从不同角度观察。</p><div className="help-grid"><span>左键拖拽</span><b>旋转模型</b><span>滚轮 / 双指捏合</span><b>缩放场景</b><span>右键拖拽 / 双指拖动</span><b>平移视角</b><span>方向键 / + −</span><b>旋转与缩放</b><span>点击楼栋标签</span><b>选择楼宇</b><span>切换 2.5D 楼层</span><b>查看空间和设备</b></div><p className="help-note">形体来自你提供的项目白模 DWG，塔楼与围合裙房为同一建筑。按塔楼结构高度 69.5 米等比校准；白模包围盒约 72.6×52.3 米，与资料 70×38 米有差异，未强行拉伸。资料裙房高 26.7 米、改造面积 28,426 m²、总投资 2.87 亿元。地上 18 层＋地下 2 层，13、14 层保留原功能。地下仅部分改造，地下形体与所有楼层布局尚未核实，为示意。内部参考方案采用灰色开放楼板、白色核心筒与楼梯；设备分类可筛选点位，右侧楼层条可切换。实际室内图纸提供后再校准；立面、入口、场地与周边建筑为设计示意，指标未接入实时数据。</p><button className="primary-button" onClick={() => setHelp(false)}>开始探索<ArrowUpRight size={15}/></button></section></div>}
+    {help && <div className="modal-backdrop" onClick={() => setHelp(false)}><section className="help-dialog" role="dialog" aria-modal="true" aria-label="模型操作帮助" onClick={e => e.stopPropagation()}><button className="dialog-close" aria-label="关闭帮助" onClick={() => setHelp(false)}><X size={19}/></button><Move3D size={31}/><h2>探索你的数字院区</h2><p>模型由真实三维几何组成，可以从不同角度观察。</p><div className="help-grid"><span>左键拖拽</span><b>旋转模型</b><span>滚轮 / 双指捏合</span><b>缩放场景</b><span>右键拖拽 / 双指拖动</span><b>平移视角</b><span>方向键 / + −</span><b>旋转与缩放</b><span>点击楼栋标签</span><b>选择楼宇</b><span>切换 2.5D 楼层</span><b>查看空间和设备</b></div><p className="help-note">形体来自你提供的项目白模 DWG，塔楼与围合裙房为同一建筑。按塔楼结构高度 69.5 米等比校准；白模包围盒约 72.6×52.3 米，与资料 70×38 米有差异，未强行拉伸。资料裙房高 26.7 米、改造面积 28,426 m²、总投资 2.87 亿元。地上 18 层＋地下 2 层，13、14 层保留原功能。地下仅部分改造，地下形体与所有楼层布局尚未核实，为示意。各分区各层分别提供独立的内部方案示意，采用灰色楼板、白色房间隔墙、门洞、核心筒与楼梯；塔楼和裙房的核心筒各自上下对齐，外围隔间与走廊按层变化；设备分类可筛选点位，右侧楼层条可切换。实际室内图纸提供后再校准；立面、入口、场地与周边建筑为设计示意，指标未接入实时数据。</p><button className="primary-button" onClick={() => setHelp(false)}>开始探索<ArrowUpRight size={15}/></button></section></div>}
     {toast && <div className="toast" role="status">{toast}</div>}
   </div>;
 }

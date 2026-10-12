@@ -31,6 +31,16 @@ test('production assets and model interactions work under repository URL', async
   await page.getByRole('button', { name: '选择设备 空调机组' }).click();
   await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('AC-01');
   await page.getByRole('button', { name: '关闭设备详情' }).click();
+  const floorCapture = () => canvas.screenshot({ style: '.scene-section > :not(.scene-host), .scene-labels, .left-panels, .right-panels { visibility: hidden !important; }' });
+  const secondFloor = createHash('sha256').update(await floorCapture()).digest('hex');
+  await page.getByLabel('选择楼层').selectOption('1');
+  await expect(page.getByLabel('楼层布局说明')).toContainText('方案示意');
+  const firstFloor = createHash('sha256').update(await floorCapture()).digest('hex');
+  expect(firstFloor, 'Production floors have different actual geometry').not.toBe(secondFloor);
+  await page.getByRole('button', { name: '选择设备 通道摄像机', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('A-1F-CAM-02');
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('西侧分区 1');
+  await page.getByRole('button', { name: '关闭设备详情' }).click();
   await page.getByRole('button', { name: '切换到 13F', exact: true }).click();
   await expect(page.locator('.scene-info')).toContainText('保留原有功能');
   await page.getByRole('button', { name: '筛选给排水', exact: true }).click();

@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 
-type Snapshot = { camera: number[]; target: number[]; distance: number; frames: number; objects: number; mode: string; auto: boolean; autoActive: boolean; selected: string; floor: number; devicesVisible: boolean; surroundingsVisible: boolean; assetsReady: boolean };
+type Snapshot = { camera: number[]; target: number[]; distance: number; frames: number; objects: number; gpuGeometries: number; mode: string; auto: boolean; autoActive: boolean; selected: string; floor: number; devicesVisible: boolean; surroundingsVisible: boolean; assetsReady: boolean };
 const snapshot = (page: Page): Promise<Snapshot> => page.evaluate(() => (window as any).__BUILDING_HARNESS__());
 const delta = (a: number[], b: number[]) => Math.sqrt(a.reduce((v, n, i) => v + (n - b[i]) ** 2, 0));
 const errors = new Map<Page, string[]>();
@@ -377,4 +377,62 @@ for (const width of [768, 390]) test(`F3: interior rail and systems usable at ${
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('.scene-section').scrollIntoViewIfNeeded();
   await page.screenshot({ path: `artifacts/harness/interior-${width}.png`, fullPage: true });
+});
+
+test('F4: all 28 floor contexts have distinct rendered layouts and stable resource replacement', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 360000 : 180000);
+  await ready(page);
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  const hashes = new Set<string>();
+  const evidence = new Set(['A-1', 'A-2', 'A-18', 'B-6', 'B--1', 'B--2']);
+  // Capture actual geometry without changing application state: omit overlays from this image only.
+  const capture = () => page.locator('.scene-host canvas').screenshot({ style: '.scene-section > :not(.scene-host), .scene-labels, .left-panels, .right-panels { visibility: hidden !important; }' });
+  let firstImage = '', firstGeometryCount = 0;
+  for (const zone of [{ id: 'A', floors: 18 }, { id: 'B', floors: 6 }]) {
+    await page.getByLabel('选择楼宇').selectOption(zone.id);
+    for (const floor of [...Array.from({ length: zone.floors }, (_, index) => index + 1), -1, -2]) {
+      await page.getByLabel('选择楼层').selectOption(String(floor));
+      await expect(page.getByLabel('楼层布局说明')).toContainText('方案示意');
+      await expect.poll(async () => { const state = await snapshot(page); return state.selected === zone.id && state.floor === floor && state.assetsReady; }).toBe(true);
+      await expect(page.locator('.device-pin')).toHaveCount(6);
+      await expect(page.locator('.device-pin:visible')).toHaveCount(6);
+      const hash = createHash('sha256').update(await capture()).digest('hex');
+      expect(hashes.has(hash), `${zone.id} ${floor} has a distinct geometric view`).toBe(false); hashes.add(hash);
+      if (zone.id === 'A' && floor === 1) { firstImage = hash; firstGeometryCount = (await snapshot(page)).gpuGeometries; }
+      if (evidence.has(`${zone.id}-${floor}`)) await page.screenshot({ path: `artifacts/harness/layout-${zone.id}-${floor}.png` });
+    }
+  }
+  expect(hashes.size).toBe(28);
+  await page.getByLabel('选择楼宇').selectOption('A');
+  await page.getByLabel('选择楼层').selectOption('1');
+  await expect.poll(async () => (await snapshot(page)).assetsReady).toBe(true);
+  expect(createHash('sha256').update(await capture()).digest('hex'), 'Returning restores the same geometry').toBe(firstImage);
+  expect((await snapshot(page)).gpuGeometries, 'No accumulated GPU geometry after 28 replacements').toBe(firstGeometryCount);
+  await expect(page.locator('.device-pin')).toHaveCount(6);
+});
+
+test('F5: changed floor updates equipment rooms while preserving inspected camera pose', async ({ page }) => {
+  await ready(page);
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  await page.getByLabel('选择楼层').selectOption('1');
+  await page.getByRole('button', { name: '选择设备 通道摄像机', exact: true }).click();
+  const detail = page.getByRole('dialog', { name: '设备详情' });
+  await expect(detail).toContainText('西侧分区 1');
+  await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.locator('.scene-host canvas').focus(); await page.keyboard.press('ArrowLeft');
+  const inspected = await snapshot(page);
+  await page.getByLabel('选择楼层').selectOption('2');
+  await expect.poll(async () => (await snapshot(page)).assetsReady).toBe(true);
+  expect(delta((await snapshot(page)).camera, inspected.camera)).toBeLessThan(.01);
+  await page.getByRole('button', { name: '选择设备 通道摄像机', exact: true }).click();
+  await expect(detail).toContainText('A-2F-CAM-02');
+  await expect(detail).toContainText('西侧分区 2');
+  await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.getByRole('button', { name: '筛选给排水', exact: true }).click();
+  await page.getByRole('button', { name: '切换到 18F', exact: true }).click();
+  await expect(page.locator('.device-pin:visible')).toHaveCount(1);
+  await page.getByRole('button', { name: /空调温度超出阈值/ }).click();
+  await expect(detail).toContainText('A-2F-AC-01');
+  await expect(detail).toContainText('核心筒西侧设备间');
+  await expect(page.locator('.device-pin:visible')).toHaveCount(6);
 });
