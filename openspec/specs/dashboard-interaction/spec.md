@@ -13,11 +13,11 @@ The application MUST provide functional overview, equipment, access and energy n
 - **THEN** the associated metrics and charts replace the overview data while retaining the 3D scene
 
 ### Requirement: Honest demo data
-The application MUST label synthetic indicators and parametric models as demo content and MUST NOT claim a production IoT connection.
+The application MUST label synthetic indicators and floor layouts as demonstrations, identify the licensed hospital exterior and illustrative supporting buildings, and MUST NOT claim the user's actual hospital BIM or live IoT/clinical connections.
 
 #### Scenario: Demo source visible
-- **WHEN** the dashboard first loads
-- **THEN** a visible demo-data indicator and parametric-model note identify the source
+- **WHEN** the dashboard loads
+- **THEN** visible source/demo indicators and author attribution identify the illustration and synthetic data
 
 ### Requirement: Responsive usable controls
 The application MUST keep navigation and scene controls accessible at desktop and narrow screen sizes without horizontal overflow.
@@ -39,3 +39,10 @@ On desktop the architecture MUST occupy a large canvas behind translucent operat
 #### Scenario: Desktop overlays and rotation
 - **WHEN** the user opens the desktop overview and drags the unobstructed central region
 - **THEN** the scene fills the workspace, the camera rotates, and selectors and floating panels remain readable and clickable
+
+### Requirement: Hospital demonstration terminology
+The dashboard MUST use Chinese hospital-campus and floor/equipment terminology, bound floors to the selected demonstration building and clearly identify synthetic indicators and floor layouts.
+
+#### Scenario: Select a hospital building and floor device
+- **WHEN** the user selects a hospital building, switches floors and locates equipment
+- **THEN** the selected building/floor/device remain consistent, floor limits are respected and the interface identifies the data and floor diagram as demonstrations

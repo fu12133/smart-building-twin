@@ -5,6 +5,10 @@ context: |
   User supplied architectural-dashboard references; user explicitly requires rotatable models
   and OpenSpec + harness development. No source BIM model or IoT endpoint provided.
   Parametric geometry and demo data are explicitly identified in UI.
+  Since 2026-10-12, the hospital edition uses a locally packaged CC BY hospital exterior
+  for A/3 outpatient floors, with procedural B/6 inpatient and C/4 medical-tech illustrations.
+  Floor diagrams and indicators remain synthetic; imported source ground/text is hidden
+  and must not participate in picking. Source attribution is visible in the footer.
   Harness means a reproducible Playwright acceptance loop, browser diagnostics and visual evidence.
 rules:
   specs:

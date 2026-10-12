@@ -2,6 +2,19 @@
 
 已发布并通过公网浏览器验收。
 
+## 2026-10-12 医院素材接入发布
+
+- 已部署源码：`c66abafb230176ac780e837173c9e867dd9952be`。
+- 成功工作流：[38231930815](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38231930815)。Linux Chromium + SwiftShader **14/14 passed (5.1 min)**，构建任务 8m32s、部署 8s；规格校验及仓库子路径构建通过。
+- 公网 HTML 已核对引用 `index-C9VpIb-A.js`、`index-6siKiiIz.css`。
+- 真实公网生产 harness：**1/1 passed (25.7 s)**。医院 GLB 和三项环境/植被资源均 HTTP 200；实际拖拽、楼层设备、导航及复位可用，无控制台/资源错误，未暴露开发诊断入口。
+- 公网另在 Edge / RTX 5090 原生 GPU 下验证真实拖拽像素变化、视角复位和空白区域不误选，四项资产 HTTP 200，浏览器无错误；未测量 FPS。
+- 公网默认、近景、背面截图和 `artifacts/harness/hospital-native-overview.png` 已实际捕获并检查；设备/手机布局截图另由本地完整验收生成。
+
+门诊主体使用 **Hospital model**，作者 **Er.B.Nijithkumar**，按 **CC BY 4.0** 保留署名和授权说明。素材为官方登录后提供的免费 GLB，无付费采购。源文件约 4.9 MB，包含原始作者/授权元数据；运行时隐藏原场地及外文机构标识，调整比例、玻璃材质并加入中文标牌。配套住院楼、医技楼、楼层布局和指标均是演示示意，未接入本院实际 BIM 或实时业务数据。详见 `public/assets/CREDITS.md`。
+
+体验地址：[打开医院版](https://guangfubill-crypto.github.io/smart-building-twin/?v=c66abaf)。
+
 ## 2026-10-12 建筑夜景与沉浸式场景发布
 
 - 已部署源码提交：`ad91b652813217c6b34f83c64304c3aadd7cb642`；应用运行代码与 `26bcdac` 相同，后续两次修正仅涉及验收等待方式及记录。
