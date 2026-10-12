@@ -1,5 +1,16 @@
 # GitHub Pages 发布记录
 
+## 2026-10-12 每层独立布局发布
+
+- 已部署源码：`6c57c3a8a2575bcba152ed74fed9365f1941edd5`。
+- 成功工作流：[38266496077](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38266496077)。严格规格4/4，Linux Chromium/SwiftShader交互23/23（9.5分钟），构建10m16s、部署19s。
+- 本地全量23/23（2.5分钟），仓库子路径生产验收1/1（16.5秒）。公网HTML实际引用`index-Bf34Dric.js` / `index-CyYjBkyV.css`。
+- 真实公网生产验收1/1（23.0秒）：四项资源HTTP200，实际拖拽/复位、1F与2F几何差异及1F房间详情、13F保留范围、水系统筛选/点选详情、全部恢复和导航通过；无控制台/HTTP错误，生产无开发诊断入口。
+
+A区1–18/B1/B2和B区1–6/B1/B2共28个独立方案，外围房间数量、跨度、隔墙、门洞按层变化，设备点与详情位置一起更新。各分区结构核心筒上下对齐，切层保留观察视角并清理旧资源。所有内部划分仍为方案示意，实际室内图纸和科室配置尚未提供。
+
+体验：[每层独立布局版](https://guangfubill-crypto.github.io/smart-building-twin/?v=6c57c3a)，切换“2.5D 楼层”后选择楼层。代表楼层与手机/平板截图见`artifacts/harness/layout-*.png`和`interior-390.png`/`interior-768.png`。文末早期发布记录保留历史状态。
+
 ## 2026-10-12 参考式内部楼层方案发布
 
 - 已部署源码：`324bf94723928d67ef752fc08b69c008818cd0a8`。

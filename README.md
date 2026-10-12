@@ -70,12 +70,15 @@ python scripts/convert-white-model.py decoded.json 项目白模.dwg
 
 内部参考方案采用灰色开放楼板、白色外墙与集中核心筒、双侧楼梯、青色设备图标和右侧楼层条；保留真实旋转与缩放。六类设备卡片的数量来自当前六个演示点位，并非实际设备台账。
 
+A区1–18/B1/B2、B区1–6/B1/B2共28个楼层上下文各有独立的方案布局。外围房间的数量、跨度、隔墙和门洞按层变化，设备位置与详情随当前方案同步。各分区核心筒保持上下对齐；内部平面仍为示意，未核实临床功能。
+
 静止视角不重复绘制，操作、巡航或图层变化会刷新画面。高像素密度设备的渲染倍率上限为 2；资源由本地包加载，并在场景销毁后释放。Vite 忽略验收生成的截图、trace 和报告目录，避免 Windows 文件锁干扰预览。
 
 ## 文件分工
 
 - `src/scene.ts`：相机、旋转控制、拾取、图层和 GPU 资源清理。
-- `src/floorGeometry.ts`：参考式灰色楼板、白色外墙与核心筒、楼梯的方案几何。
+- `src/floorLayouts.ts`：按分区/楼层解析唯一方案，包括楼板、核心筒、房间/门洞和设备位置；场景与界面共同使用。
+- `src/floorGeometry.ts`：将当前方案生成灰色楼板、白色隔墙/门洞与核心筒、楼梯的实体几何。
 - `src/deviceSystems.ts`：六类设备名称与图标；分类数量来自楼层示意点位。
 - `src/hospitalAsset.ts`：白模派生 GLB 加载、方案幕墙材质、杆件和模型资源清理。
 - `scripts/convert-white-model.py`：源网格转换、三角化和来源校验清单。
@@ -87,9 +90,17 @@ python scripts/convert-white-model.py decoded.json 项目白模.dwg
 
 ## 自动发布
 
-`.github/workflows/pages.yml` 在每次推送 `main` 时校验 OpenSpec、运行 21 项交互与来源 harness、构建并部署 GitHub Pages。依赖由 `package-lock.json` 锁定；官方 actions 固定 commit SHA。
+`.github/workflows/pages.yml` 在每次推送 `main` 时校验 OpenSpec、运行 23 项交互与来源 harness、构建并部署 GitHub Pages。依赖由 `package-lock.json` 锁定；官方 actions 固定 commit SHA。
 
 Pages 的仓库子路径由 `PAGES_BASE_PATH` 指定。本地开发默认 `/`，继续使用 4187 端口。
+
+本地模拟仓库子路径时，构建和预览进程都需要相同的环境配置。临时使用4188端口，在另一个终端运行`npm run harness:production`：
+
+```powershell
+$env:PAGES_BASE_PATH = '/smart-building-twin/'
+npm run build
+npm run preview -- --port 4188 --strictPort
+```
 
 复验生产站点：
 
@@ -100,6 +111,12 @@ Remove-Item Env:PRODUCTION_URL
 ```
 
 生产验收会检查真实画布拖拽、楼层、设备详情、导航、资源 HTTP 状态及控制台错误，并确认开发诊断入口未暴露。
+
+## 楼层方案维护
+
+通过`getFloorLayout(building, floor)`读取当前方案，消费方不修改缓存数据。几何和点位使用同一世界坐标，北侧为负Z；房间矩形包含面向公共走廊的门洞方向。实际图纸到位后应在这里替换对应楼层数据，避免界面和场景分别维护不同点位。
+
+分区/楼层效果先夹取楼层上限，再调用BuildingScene选择和重建；跨层告警选中效果仍排在其后。楼层资源与长期场景资源分开管理，替换时释放旧几何、材质、灯光及设备DOM/监听器；嵌套图标root在React提交之后卸载。切层保留当前相机；退出楼层时清除控制器惯性并恢复保存的3D姿态。F4覆盖全部28个实际画面、确定性返回和资源数量，F5覆盖楼层详情与观察姿态联动。
 
 建筑画质复查：运行 `node harness/capture-architecture.mjs` 捕获默认、滚轮放大和实际拖拽后的视角。可设置同一 `PRODUCTION_URL` 对线上版本截图；画质需要检查截图，不能仅凭三角形数量判断。
 

@@ -5,4 +5,4 @@
 ## Verification and delivery
 - [x] Add user-control harness coverage for every distinct floor and repeat switching.
 - [x] Run strict specs, build, full harness and inspect representative screenshots.
-- [ ] Publish, verify production, update actual evidence and archive the change.
+- [x] Publish, verify production, update actual evidence and archive the change.

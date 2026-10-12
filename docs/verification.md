@@ -1,5 +1,7 @@
 # Verification — rotatable-building-twin
 
+本文保留各阶段的历史验收记录；最新行为与证据见文末“每层独立布局验收（2026-10-12）”，早期重复楼层和参数化外观的描述不代表当前版本。
+
 Result: passed for the implemented local demo scope.
 
 GitHub Pages 发布与公网验证另见 [release.md](release.md)。
@@ -139,3 +141,9 @@ BuildingScene切换时只替换楼层子树，立即清理旧几何/材质/灯�
 已打开检查A区1F/18F、B区6F/B2及390手机截图，分区差异和门洞可见，核心筒层次、接触阴影、六点位和选择器清晰，无横向溢出。证据 `artifacts/harness/layout-A-1.png`、`layout-A-2.png`、`layout-A-18.png`、`layout-B-6.png`、`layout-B--1.png`、`layout-B--2.png`；布局检查记录见 `design-qa.md`。新增专项5/5（41.0秒），首轮React卸载错误修复后以最终全量结果为准。
 
 仓库子路径本地生产验收 **1/1 passed（16.5秒；用例15.9秒）**：四项模型/环境资产HTTP200，真实拖拽/复位、1F与2F实际几何差异、1F设备房间、13F保留范围及分类/详情、导航通过，无控制台/资源错误，生产没有开发快照。第一次本地预览未给preview进程配置PAGES_BASE_PATH，资产请求等待超时；用正确`/smart-building-twin/`路径重启本任务4188预览后通过，没有修改运行代码或放宽断言。
+
+源码`6c57c3a8a2575bcba152ed74fed9365f1941edd5`已通过[工作流38266496077](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38266496077)：严格规格4/4，Linux Chromium/SwiftShader **23/23 passed（9.5分钟）**，构建任务10m16s、部署19s。公网HTML已实际核对`index-Bf34Dric.js` / `index-CyYjBkyV.css`。
+
+真实公网生产harness **1/1 passed（23.0秒；用例22.3秒）**：四项资产HTTP200，真实3D拖拽/复位，1F/2F几何画面不同，1F摄像机房间、13F保留功能和水系统筛选/详情、全部点位恢复、主导航通过；无控制台或HTTP错误，生产未暴露开发诊断入口。公网`interior-online.png`已打开检查，13F外围分区、核心筒、六点位及控件完整可见。
+
+变更归档为`openspec/changes/archive/2026-10-12-distinct-floor-layouts/`，主规格已合入每层独立方案和点位联动要求，归档后严格校验 **3/3 passed**。后续提交仅为文档、验收截图及规格归档；已发布应用仍为6c57c3a运行代码。本任务临时4188预览已关闭，4187开发预览保留。
