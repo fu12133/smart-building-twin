@@ -34,6 +34,10 @@ Visual inspection checked default, close and reverse angles, floor/device detail
 
 Cloud run `38214620444` passed **9 / 11 (7.1 min)**. V1 exhausted its 90-second cumulative budget; V8 exhausted the 12-second initial-frame wait before entering the recovery sequence. The harness now distinguishes cold software-GPU initialization (45-second CI wait) from UI assertions (unchanged 12 seconds), captures bounded page clips instead of scrolling the canvas locator, and uses eight real pointer moves over the same displacement. Camera displacement and pixel-change assertions are unchanged. V1/V8 allow 120 seconds for cumulative initialization/captures. Both revised scenarios passed locally **2 / 2 (22.2 s)**. The production application code remains unchanged from `26bcdac`.
 
+Downloaded traces further confirm that V1's camera and pixel-change assertions completed before the final screenshot timeout; the after-drag canvas capture consumed approximately 49 seconds. This was cumulative capture time, not a failed rotation assertion. A local repository-path production check passed again **1 / 1 (16.1 s)**. Native hardware verification used Edge with ANGLE/NVIDIA GeForce RTX 5090 Direct3D11: actual pointer drag changed rendered pixel hashes, the visible reset control worked, and no page/console errors were observed. `architecture-native-gpu.png` was captured at 1600×1000 and visually inspected. Hardware FPS was not measured.
+
+Run `38215635693` passed **10 / 11 (7.2 min)**, including V1 (84.7 seconds) and V8 (33.4 seconds). V6's post-recovery first-frame poll still used the UI wait budget and timed out. It now consistently uses the same cold GPU initialization budget as the other first-frame waits; recovery UI and browser-error assertions remain unchanged.
+
 `npm run build` passed TypeScript validation and production bundling. `npm run spec:validate` passed OpenSpec strict validation. `npm run harness` passed **9 / 9** acceptance tests in **20.8 s**, using Microsoft Edge headless + SwiftShader on Windows. The final run produced no unexpected browser console errors or uncaught exceptions.
 
 | Requirement | Evidence |
@@ -72,5 +76,5 @@ The desktop, floor-device and phone screenshots were visually inspected. Compare
 ## Remaining scope and dependency notes
 
 - Geometry, IoT values and alarms are explicitly synthetic. Repeated floor diagrams provide demonstration semantics, not engineering BIM accuracy.
-- Actual hardware GPU performance and touch-device gestures were not tested on physical devices. Automated WebGL verification used software rendering.
+- Full automated WebGL acceptance uses software rendering. Native RTX 5090 rendering and pointer pixel changes were separately checked; hardware FPS and physical touch-device gestures remain unmeasured.
 - `npm audit --omit=dev`: 0 vulnerabilities. Full audit reports 4 high-severity entries in OpenSpec's transitive `fast-glob → micromatch → braces` development-tool chain. Registry version 3.0.3 of braces has no patched replacement in the current dependency tree; avoid running the CLI against untrusted pathological glob input. This dependency is excluded from the browser production bundle.

@@ -157,7 +157,7 @@ test('V6: lost graphics context produces recovery UI', async ({ page }) => {
   await expect(page.getByRole('button', { name: '重新加载' })).toBeVisible();
   await page.getByRole('button', { name: '重新加载' }).click();
   await expect(page.getByRole('alert')).toBeHidden();
-  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(0);
+  await expect.poll(async () => (await snapshot(page)).frames, { timeout: initializationTimeout }).toBeGreaterThan(0);
 });
 
 test('V7: idle scene stops GPU redraws and controls/layers redraw visible geometry', async ({ page }) => {
