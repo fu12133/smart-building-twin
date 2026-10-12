@@ -1,5 +1,16 @@
 # GitHub Pages 发布记录
 
+## 2026-10-12 参考式内部楼层方案发布
+
+- 已部署源码：`324bf94723928d67ef752fc08b69c008818cd0a8`。
+- 成功工作流：[38248548303](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38248548303)。规格4/4，Linux Chromium/SwiftShader交互21/21（10.7分钟），构建11m29s、部署32s。
+- 公网HTML已核对 `index-goHrCJ1q.js` / `index-CyYjBkyV.css`。
+- 公网生产验收1/1（17.6秒）：真实旋转、复位、楼层条、13F保留范围、水系统筛选/点选详情、恢复全部及导航正常；四项资源HTTP200，控制台无错误，生产没有开发诊断入口。`interior-online.png` / `production-online.png` 已检查。
+
+内部采用实体灰色圆角楼板、白色外墙/柱/核心筒及双侧楼梯，补充接触阴影与青色设备图标。右侧六类设备卡片支持筛选、楼层条同步选择，手机横向楼层条、平板独立场景行。外部DWG形体保持不变；内部布局和点位仍是设计示意，未填写医院名称、未接实际系统。OpenSpec和视觉QA记录已补齐。
+
+体验：[新版医院方案](https://guangfubill-crypto.github.io/smart-building-twin/?v=324bf94)，进入后切换“2.5D 楼层”。
+
 ## 2026-10-12 项目白模医院立面发布
 
 源码 `4008aa8`，成功工作流 [38243954958](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38243954958)：规格 4/4，交互 17/17（6.5 分钟），公网生产验收 1/1（16.2 秒）。HTML 产物 `index-DFEbwJP4.js` / `index-Ddj0XnoS.css` 已核对。原始 DWG 留在本地，站点使用去除城市、重复构件的源主体几何，并保留均匀比例、来源清单及设计示意边界。A 为 18 层塔楼，B 为 6 层裙房，地下两层为示意，13/14 层标明保留原功能；未写入医院名称。
