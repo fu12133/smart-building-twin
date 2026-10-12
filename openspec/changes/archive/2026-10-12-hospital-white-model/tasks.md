@@ -3,4 +3,4 @@
 - [x] Add hospital facade finishes and omit institution names.
 - [x] Integrate source A/B zones, project facts and bounded basement/floor semantics.
 - [x] Validate specifications, build, harness and rendered angles.
-- [ ] Publish, record actual public evidence and archive change.
+- [x] Publish, record actual public evidence and archive change.

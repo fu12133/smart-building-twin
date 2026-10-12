@@ -306,3 +306,75 @@ test('W3: source tower and podium meshes select their own zones through pointer 
   await canvas.click({ position: { x: rect.width * .42, y: rect.height * .64 } });
   await expect(page.locator('.building-name')).toContainText('B区 · 裙房');
 });
+
+test('F1: floor rail bounds, real floor rotation and exact 3D restoration', async ({ page }) => {
+  await ready(page);
+  const original = await snapshot(page);
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  await expect(page.getByRole('button', { name: '切换到 2F', exact: true })).toBeInViewport();
+  await page.getByRole('button', { name: '切换到 18F', exact: true }).click();
+  await expect(page.getByLabel('选择楼层')).toHaveValue('18');
+  await page.getByLabel('选择楼宇').selectOption('B');
+  await expect(page.getByRole('button', { name: '切换到 6F', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: '切换到 7F', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '切换到 0F', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '切换到 B2', exact: true }).click();
+  await expect(page.getByLabel('选择楼层')).toHaveValue('-2');
+  await expect(page.locator('.scene-info')).toContainText('地下部分改造');
+  const floorPose = await snapshot(page), rect = (await page.locator('.scene-host canvas').boundingBox())!;
+  await page.mouse.move(rect.x + rect.width * .48, rect.y + rect.height * .66);
+  await page.mouse.down();
+  await page.mouse.move(rect.x + rect.width * .59, rect.y + rect.height * .7, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => delta((await snapshot(page)).camera, floorPose.camera)).toBeGreaterThan(8);
+  await page.mouse.wheel(0, -200);
+  await expect.poll(async () => (await snapshot(page)).distance).toBeLessThan(floorPose.distance * .96);
+  await page.getByRole('button', { name: '3D 院区' }).click();
+  await expect.poll(async () => delta((await snapshot(page)).camera, original.camera)).toBeLessThan(.1);
+});
+
+test('F2: system filters compose with layers and alarm location clears filter', async ({ page }) => {
+  await ready(page);
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  await expect(page.locator('.device-pin:visible')).toHaveCount(6);
+  await expect(page.getByLabel('楼层设备系统')).toContainText('6 个示意点位');
+  await page.getByRole('button', { name: '筛选视频监控', exact: true }).click();
+  await expect(page.locator('.device-pin:visible')).toHaveCount(1);
+  await page.getByRole('button', { name: '选择设备 通道摄像机', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('A-2F-CAM-02');
+  await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('设备点位', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '筛选给排水', exact: true }).click();
+  await expect(page.locator('.device-pin:visible')).toHaveCount(0);
+  await page.getByLabel('设备点位', { exact: true }).check();
+  await expect(page.getByRole('button', { name: '选择设备 给排水监测器', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '选择设备 通道摄像机', exact: true })).toBeHidden();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByRole('button', { name: /空调温度超出阈值/ }).click();
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('A-2F-AC-01');
+  await expect(page.getByRole('button', { name: '显示全部设备' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.device-pin:visible')).toHaveCount(6);
+  await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.screenshot({ path: 'artifacts/harness/interior-desktop.png' });
+});
+
+for (const width of [768, 390]) test(`F3: interior rail and systems usable at ${width}`, async ({ page }) => {
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 1024 });
+  await ready(page);
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  const controls = (await page.locator('.scene-controls').boundingBox())!, rail = (await page.getByLabel('楼层导航').boundingBox())!;
+  expect(controls.x + controls.width <= rail.x || rail.x + rail.width <= controls.x || controls.y + controls.height <= rail.y || rail.y + rail.height <= controls.y, 'Floor and camera controls do not overlap').toBe(true);
+  await page.getByRole('button', { name: '切换到 18F', exact: true }).click();
+  await page.getByRole('button', { name: '切换到 13F', exact: true }).click();
+  await expect(page.locator('.scene-info')).toContainText('保留原有功能');
+  await page.getByRole('button', { name: '筛选给排水', exact: true }).click();
+  await page.getByRole('button', { name: '选择设备 给排水监测器', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('A-13F-WTR-05');
+  await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.getByRole('button', { name: '显示全部设备' }).click();
+  await expect(page.locator('.device-pin:visible')).toHaveCount(6);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('.scene-section').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `artifacts/harness/interior-${width}.png`, fullPage: true });
+});

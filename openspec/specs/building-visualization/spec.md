@@ -24,17 +24,17 @@ The application MUST provide a visible automatic-rotation toggle that works only
 - **THEN** camera orientation changes while active and stabilizes after controls damping settles
 
 ### Requirement: Building selection and scene layers
-The application MUST select buildings through visible labels or scene picking and independently toggle device markers and surrounding buildings.
+The application MUST select source tower/podium zones through visible labels or scene picking and independently toggle device markers and illustrative surrounding buildings.
 
 #### Scenario: Selected building
-- **WHEN** the user selects B座
-- **THEN** B座 is highlighted and the building/floor information updates
+- **WHEN** the user selects B区
+- **THEN** the podium zone is highlighted and the zone/floor information updates
 
 ### Requirement: 2.5D floor visualization
 The application MUST offer a 2.5D demonstration hospital floor map with extruded room boundaries, bounded floor selection and selectable equipment markers. Its layout MUST be visibly identified as synthetic.
 
 #### Scenario: Floor device selection
-- **WHEN** the user selects the inpatient building, switches to 2.5D, chooses floor 3 and selects a device
+- **WHEN** the user selects the podium zone, switches to 2.5D, chooses floor 3 and selects a device
 - **THEN** the heading shows 3F and device details identify the current building, floor and demonstration room
 
 #### Scenario: Return to 3D
@@ -49,11 +49,11 @@ The application MUST show an actionable error when WebGL creation fails or the r
 - **THEN** the UI displays a readable rendering failure with a reload action instead of an empty canvas
 
 ### Requirement: Detailed architectural rendering
-The hospital scene MUST render a licensed detailed hospital exterior, reflective glazing, visible facade structure, rooftop equipment and landscaped ground. Supporting buildings MAY use explicitly identified procedural geometry. All assets MUST remain genuine rotatable geometry and MUST be identified as a demonstration rather than the user's actual hospital BIM.
+The hospital scene MUST render the supplied DWG hospital exterior with proposed finishes, reflective glazing, visible facade structure, rooftop equipment and landscaped ground. Optional surrounding city buildings and landscaping MUST be identified as illustrative. All assets MUST remain genuine rotatable geometry and MUST be identified as source white-model geometry with proposed finishes, without asserting a verified production BIM connection.
 
 #### Scenario: Inspect the default architectural view
 - **WHEN** the user opens the 3D overview
-- **THEN** the imported hospital exterior, Chinese entrance signs, illustrative supporting buildings and landscaped ground are visible
+- **THEN** the DWG-derived tower/podium, generic Chinese entrance signs and landscaped ground are visible
 
 #### Scenario: Inspect another side
 - **WHEN** the user rotates and zooms with pointer and wheel
@@ -87,16 +87,30 @@ Any third-party scene assets MUST be locally packaged with source/license docume
 - **THEN** local lighting and vegetation assets load successfully without external runtime dependency, and controls remain functional
 
 ### Requirement: Licensed hospital campus geometry
-The hospital demonstration MUST render locally packaged licensed hospital geometry with real pointer rotation, visible source attribution and a clear distinction from the user's actual hospital BIM. Loading failure MUST produce readable status and recovery, and late asset completion MUST not attach resources to a disposed scene.
+The hospital demonstration MUST render locally packaged user-provided project geometry with real pointer rotation, visible source provenance and a clear distinction between source geometry, proposed medical finishes and unverified BIM/floor semantics. Loading failure MUST produce readable status and recovery, and late asset completion MUST not attach resources to a disposed scene.
 
 #### Scenario: Explore the imported hospital
 - **WHEN** a user opens the hospital demonstration and drags or zooms the canvas
-- **THEN** the imported hospital renders on multiple sides with usable framing and real camera motion, and its source and demonstration status are visible
+- **THEN** the imported hospital renders on multiple sides with usable framing and real camera motion, and its white-model source and proposed-finish status are visible
 
 #### Scenario: Recover or reload during model loading
 - **WHEN** hospital geometry fails to load or completes after a scene has been reloaded
 - **THEN** failure is actionable, the recreated scene retains one usable renderer, and disposed-scene resources are released
 
 #### Scenario: Hidden source geometry is not selectable
-- **WHEN** the user selects the medical-tech building and clicks the empty campus foreground
-- **THEN** the selection remains on that building, and hidden original ground or institution text does not capture the click
+- **WHEN** the user selects the podium zone and clicks the empty campus foreground
+- **THEN** the selection remains on that building, and excluded city geometry or hidden objects does not capture the click
+
+### Requirement: Project white-model geometry
+The application MUST use the supplied DWG tower and podium geometry with traceable source handles and uniform height calibration, preserve real pointer rotation and display the distinction between source shape and proposed hospital finishes. It MUST NOT render invented supporting hospital buildings or invent an institution name.
+
+#### Scenario: Inspect source building
+- **WHEN** a visitor opens and rotates the model
+- **THEN** the source enclosed podium, tall tower and curtain-wall members remain visible on multiple sides, with source/proposed-finish labeling
+
+### Requirement: Project floor scope
+The application MUST provide tower floors 1–18, podium floors 1–6 and schematic B1/B2 navigation without floor zero. Tower floors 13/14 MUST identify retained original functions; basements MUST identify partial renovation and unverified underground geometry.
+
+#### Scenario: Floor bounds and retained functions
+- **WHEN** a user selects tower 18F, switches to the podium, then selects tower 13F/14F or basement B2
+- **THEN** podium selection clamps to 6F, retained floors show their source scope and B2 remains selectable with schematic/partial-renovation labeling

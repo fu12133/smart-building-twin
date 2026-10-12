@@ -8,6 +8,7 @@ artifacts/harness/results.json
 artifacts/harness/production-results.json
 harness/artifacts/
 artifacts/ci/
+artifacts/design/comparison-*.jpg
 .env
 .env.*
 *.local

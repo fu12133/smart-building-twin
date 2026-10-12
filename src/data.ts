@@ -6,9 +6,11 @@ export const buildings = [
 export const floorName = (floor: number) => floor < 0 ? `B${Math.abs(floor)}` : `${floor}F`;
 export const floorScope = (building: string, floor: number) => floor < 0 ? '地下部分改造 · 地下形体与布局为示意' : building === 'A' && [13, 14].includes(floor) ? '保留原有功能 · 非本次改造楼层' : '改造范围 · 楼层布局为示意';
 export const devices = [
-  { id: 'AC-01', name: '空调机组', type: 'hvac', status: '正常', x: -12, z: -7, value: '24.6 °C', room: '护士站' },
-  { id: 'CAM-02', name: '通道摄像机', type: 'camera', status: '正常', x: 2, z: 3, value: '在线', room: '公共走廊' },
-  { id: 'SMK-03', name: '烟感探测器', type: 'fire', status: '告警', x: 12, z: -7, value: '烟雾浓度异常', room: '诊室 02' },
-  { id: 'MTR-04', name: '智能电表', type: 'power', status: '正常', x: -12, z: 9, value: '12.8 kWh', room: '设备机房' },
+  { id: 'AC-01', name: '空调机组', type: 'hvac', status: '正常', x: -4.8, z: -4.5, value: '24.6 °C', room: '核心筒西侧' },
+  { id: 'CAM-02', name: '通道摄像机', type: 'camera', status: '正常', x: -9.8, z: -9, value: '在线', room: '公共走廊' },
+  { id: 'SMK-03', name: '烟感探测器', type: 'fire', status: '告警', x: 4.8, z: -4.5, value: '烟雾浓度异常', room: '核心筒东侧' },
+  { id: 'MTR-04', name: '智能电表', type: 'power', status: '正常', x: -4.8, z: 2.5, value: '12.8 kWh', room: '设备间（示意）' },
+  { id: 'WTR-05', name: '给排水监测器', type: 'water', status: '正常', x: 10.5, z: 1, value: '0.32 MPa', room: '管井（示意）' },
+  { id: 'DOOR-06', name: '通道门禁', type: 'access', status: '正常', x: 1, z: 10, value: '在线', room: '核心筒入口' },
 ];
 export const viewNames: Record<View, string> = { overview: '院区总览', equipment: '设备物联', access: '通行统计', energy: '能源分析' };

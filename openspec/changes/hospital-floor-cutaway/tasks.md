@@ -1,0 +1,6 @@
+- [x] Record reference, scenarios and design before implementation.
+- [x] Build white/gray cutaway geometry and cyan icon markers.
+- [x] Add bounded floor rail and composable equipment filters.
+- [x] Verify user controls, camera restoration, narrow layouts and rendered reference comparison.
+- [x] Run strict specification validation, build and full harness.
+- [ ] Publish, verify public controls, record evidence and archive.

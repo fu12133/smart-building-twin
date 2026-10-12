@@ -7,9 +7,14 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { buildings, devices } from './data';
 import { Architecture } from './architecture';
 import { HospitalAsset } from './hospitalAsset';
+import { createFloorGeometry } from './floorGeometry';
+import { deviceSystems, DeviceFilter } from './deviceSystems';
+import { createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 
 type Options = { onSelect: (id: string) => void; onDevice: (id: string) => void; onError: (error: string) => void; onModelLoaded: () => void };
 export class BuildingScene {
@@ -33,6 +38,8 @@ export class BuildingScene {
   private mode: '3d' | 'floor' = '3d';
   private selected = 'A';
   private floor = 2;
+  private fittedFloorScale = 1;
+  private deviceFilter: DeviceFilter = 'all';
   private auto = false;
   private savedPosition = new THREE.Vector3();
   private savedTarget = new THREE.Vector3();
@@ -44,11 +51,14 @@ export class BuildingScene {
   private hospital!: HospitalAsset;
   private environmentTarget: THREE.WebGLRenderTarget;
   private composer: EffectComposer;
+  private floorAO: SSAOPass;
   private bloom: UnrealBloomPass;
   private output: OutputPass;
   private antialias?: ShaderPass;
   private hdrSettled = false;
   private hdrSource: THREE.DataTexture;
+  private exteriorBackground: THREE.Texture;
+  private floorBackground = new THREE.Color(0x0a1c2c);
 
   constructor(private host: HTMLDivElement, private options: Options) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -58,7 +68,7 @@ export class BuildingScene {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.02;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
     this.renderer.shadowMap.needsUpdate = true;
     this.architecture = new Architecture(this.renderer, () => {
@@ -67,7 +77,7 @@ export class BuildingScene {
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.environmentTarget = pmrem.fromEquirectangular(this.architecture.environment());
     this.scene.environment = this.environmentTarget.texture;
-    this.scene.background = this.architecture.background();
+    this.exteriorBackground = this.architecture.background(); this.scene.background = this.exteriorBackground;
     pmrem.dispose();
     this.hdrSource = new HDRLoader().load(import.meta.env.BASE_URL + 'assets/night-city.hdr', texture => {
       if (this.destroyed) { texture.dispose(); return; }
@@ -87,6 +97,9 @@ export class BuildingScene {
     const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: software ? 0 : Math.min(4, this.renderer.capabilities.maxSamples) });
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.floorAO = new SSAOPass(this.scene, this.camera, 1, 1, 8);
+    this.floorAO.kernelRadius = 3; this.floorAO.minDistance = .00005; this.floorAO.maxDistance = .01;
+    this.floorAO.enabled = false; this.composer.addPass(this.floorAO);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .14, .2, 1.65);
     this.composer.addPass(this.bloom);
     this.output = new OutputPass(); this.composer.addPass(this.output);
@@ -198,25 +211,18 @@ export class BuildingScene {
     this.labels.appendChild(element); this.labelNodes.push({ element, position, floorOnly });
   }
   private createFloor() {
-    this.box(this.floorMap, 44, 1, 32, 0, -0.5, 0, 0x183c54);
-    this.lineBox(this.floorMap, 44, 1, 32, 0, -0.5, 0, 0x5dbcd5);
-    const rooms = [{ x: -12, z: -7, w: 18, d: 14, c: 0x245974 }, { x: 12, z: -7, w: 18, d: 14, c: 0x284d67 }, { x: -12, z: 9, w: 18, d: 10, c: 0x214c60 }, { x: 12, z: 9, w: 18, d: 10, c: 0x284d67 }];
-    for (const room of rooms) {
-      this.box(this.floorMap, room.w, 0.15, room.d, room.x, 0.1, room.z, room.c);
-      this.box(this.floorMap, room.w, 2.5, 0.3, room.x, 1.25, room.z - room.d / 2, 0x88b7c6);
-      this.box(this.floorMap, 0.3, 2.5, room.d, room.x - room.w / 2, 1.25, room.z, 0x88b7c6);
-      for (let j = 0; j < 4; j++) {
-        this.box(this.floorMap, 2.7, .7, 1.5, room.x - 5 + j * 3.3, .45, room.z, 0x4f7b91);
-        this.box(this.floorMap, 2.6, .25, 1.4, room.x - 5 + j * 3.3, .9, room.z, 0xdde8e6);
-        this.box(this.floorMap, .55, .2, 1.2, room.x - 5.8 + j * 3.3, 1.1, room.z, 0xf3f5ef);
-      }
-    }
-    this.box(this.floorMap, 3, 0.2, 31, 0, 0.15, 0, 0x326878);
-    this.box(this.floorMap, 43, 0.2, 3, 0, 0.15, 2, 0x326878);
+    createFloorGeometry(this.floorMap);
     for (const d of devices) {
-      const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 1, 2, 20), new THREE.MeshBasicMaterial({ color: d.status === '告警' ? 0xff9c62 : 0x48dfce }));
-      pin.position.set(d.x, 2, d.z); pin.userData.device = d.id; this.floorMap.add(pin);
-      this.addLabel(d.name, new THREE.Vector3(d.x, 5, d.z), true, () => this.options.onDevice(d.id), 'device-label ' + (d.status === '告警' ? 'warning' : ''));
+      const pin = new THREE.Mesh(new THREE.ConeGeometry(.5, 1.3, 20), new THREE.MeshBasicMaterial({ color: 0x25ded7 }));
+      pin.rotation.z = Math.PI; pin.position.set(d.x, 3.1, d.z);
+      pin.userData.device = d.id; pin.userData.type = d.type; this.floorMap.add(pin);
+      this.addLabel(d.name, new THREE.Vector3(d.x, 4.4, d.z), true, () => this.options.onDevice(d.id), 'device-label device-pin ' + (d.status === '告警' ? 'warning' : ''));
+      const element = this.labelNodes[this.labelNodes.length - 1].element;
+      element.dataset.type = d.type; element.dataset.device = d.id; element.title = d.name;
+      element.textContent = '';
+      const root = createRoot(element), Icon = deviceSystems.find(system => system.type === d.type)!.icon;
+      root.render(createElement(Icon, { size: 21, strokeWidth: 1.8, 'aria-hidden': true }));
+      this.disposables.push(() => root.unmount());
     }
   }
   setMode(mode: '3d' | 'floor') {
@@ -224,13 +230,16 @@ export class BuildingScene {
     this.clearMomentum();
     if (mode === 'floor') {
       this.savedPosition.copy(this.camera.position); this.savedTarget.copy(this.controls.target);
-      this.camera.position.set(42, 62, 58); this.controls.target.set(0, 0, 0);
-      this.controls.minDistance = 35; this.controls.maxDistance = 160;
+      const fit = this.floorFit(), x = innerWidth <= 760 ? 0 : 2; this.fittedFloorScale = fit;
+      this.camera.position.set(x, 50 * fit, 44 * fit + 3); this.controls.target.set(x, 0, 3);
+      this.controls.minDistance = 35; this.controls.maxDistance = 220;
     } else {
       this.camera.position.copy(this.savedPosition); this.controls.target.copy(this.savedTarget);
       this.controls.minDistance = 55; this.controls.maxDistance = 520;
     }
     this.mode = mode; this.city.visible = mode === '3d'; this.floorMap.visible = mode === 'floor';
+    this.floorAO.enabled = mode === 'floor';
+    this.scene.background = mode === 'floor' ? this.floorBackground : this.exteriorBackground;
     this.renderDirty = true;
     this.renderer.shadowMap.needsUpdate = true;
     this.controls.autoRotate = this.auto && mode === '3d'; this.controls.update();
@@ -250,8 +259,20 @@ export class BuildingScene {
     this.markers.visible = showDevices; this.surroundings.visible = showSurroundings;
     this.renderDirty = true;
     this.renderer.shadowMap.needsUpdate = true;
-    for (const label of this.labelNodes) if (label.floorOnly) label.element.dataset.hiddenLayer = String(!showDevices);
-    for (const mesh of this.floorMap.children) if (mesh.userData.device) mesh.visible = showDevices;
+    this.updateDeviceVisibility();
+  }
+  setDeviceFilter(filter: DeviceFilter) { this.deviceFilter = filter; this.updateDeviceVisibility(); }
+  private updateDeviceVisibility() {
+    this.renderDirty = true;
+    for (const label of this.labelNodes) if (label.floorOnly) label.element.dataset.hiddenLayer = String(!this.markers.visible || (this.deviceFilter !== 'all' && label.element.dataset.type !== this.deviceFilter));
+    for (const mesh of this.floorMap.children) if (mesh.userData.device) mesh.visible = this.markers.visible && (this.deviceFilter === 'all' || mesh.userData.type === this.deviceFilter);
+  }
+  setSelectedDevice(id: string | null) {
+    for (const label of this.labelNodes) if (label.floorOnly) {
+      const selected = label.element.dataset.device === id;
+      label.element.classList.toggle('selected-device', selected);
+      label.element.setAttribute('aria-pressed', String(selected));
+    }
   }
   select(id: string) {
     this.renderDirty = true;
@@ -265,8 +286,9 @@ export class BuildingScene {
     const auto = this.controls.autoRotate; this.controls.autoRotate = false;
     this.controls.enableDamping = false;
     const fit = Math.max(1, Math.min(1.85, 1.05 / this.camera.aspect));
-    this.camera.position.set(...(this.mode === '3d' ? [-105 * fit, 80 * fit, 138 * fit] : [42 * fit, 62 * fit, 58 * fit]) as [number, number, number]);
-    this.controls.target.set(0, this.mode === '3d' ? 27 : 0, 0); this.controls.update();
+    const floorFit = this.floorFit(), x = innerWidth <= 760 ? 0 : 2; this.fittedFloorScale = floorFit;
+    this.camera.position.set(...(this.mode === '3d' ? [-105 * fit, 80 * fit, 138 * fit] : [x, 50 * floorFit, 44 * floorFit + 3]) as [number, number, number]);
+    this.controls.target.set(this.mode === '3d' ? 0 : x, this.mode === '3d' ? 27 : 0, this.mode === '3d' ? 0 : 3); this.controls.update();
     this.controls.enableDamping = true; this.controls.autoRotate = auto;
   }
   zoom(factor: number) {
@@ -300,12 +322,25 @@ export class BuildingScene {
     const w = this.host.clientWidth, h = this.host.clientHeight;
     if (!w || !h) return;
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h);
+    if (this.mode === 'floor') {
+      const fit = this.floorFit(), offset = this.camera.position.clone().sub(this.controls.target);
+      offset.multiplyScalar(fit / this.fittedFloorScale);
+      offset.setLength(THREE.MathUtils.clamp(offset.length(), 35, 220));
+      this.camera.position.copy(this.controls.target).add(offset); this.fittedFloorScale = fit; this.controls.update();
+    }
     this.composer.setSize(w, h);
     const ratio = this.renderer.getPixelRatio();
+    this.floorAO.setSize(Math.max(1, Math.round(w * ratio * .5)), Math.max(1, Math.round(h * ratio * .5)));
     this.bloom.setSize(w * ratio * .5, h * ratio * .5);
     this.antialias?.uniforms['resolution'].value.set(1 / (w * ratio), 1 / (h * ratio));
     this.renderDirty = true;
     if (this.frame === 0 && this.controls) this.reset();
+  }
+  private floorFit() {
+    const margin = innerWidth > 1050 ? (innerWidth <= 1240 ? 493 : 646) : innerWidth > 760 ? 66 : 22;
+    const available = Math.max(100, this.host.clientWidth - margin);
+    // Include perspective expansion of the near edge, plus breathing room around the perimeter.
+    return Math.max(1, Math.min(3.2, 44 * this.host.clientHeight * 1.22 / (2 * Math.tan(Math.PI / 9) * Math.hypot(50, 44) * available * .94)));
   }
   private animate = (time: number) => {
     if (this.destroyed) return;
@@ -343,7 +378,7 @@ export class BuildingScene {
     this.scene.traverse(obj => { if (obj instanceof THREE.DirectionalLight || obj instanceof THREE.SpotLight || obj instanceof THREE.PointLight) obj.shadow.dispose(); });
     this.environmentTarget.dispose(); this.architecture.dispose();
     this.hdrSource.dispose();
-    this.bloom.dispose(); this.output.dispose(); this.composer.dispose();
+    this.floorAO.dispose(); this.bloom.dispose(); this.output.dispose(); this.composer.dispose();
     this.antialias?.dispose();
     this.renderer.dispose(); this.renderer.domElement.remove(); this.labels.remove();
   }

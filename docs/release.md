@@ -1,5 +1,11 @@
 # GitHub Pages 发布记录
 
+## 2026-10-12 项目白模医院立面发布
+
+源码 `4008aa8`，成功工作流 [38243954958](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38243954958)：规格 4/4，交互 17/17（6.5 分钟），公网生产验收 1/1（16.2 秒）。HTML 产物 `index-DFEbwJP4.js` / `index-Ddj0XnoS.css` 已核对。原始 DWG 留在本地，站点使用去除城市、重复构件的源主体几何，并保留均匀比例、来源清单及设计示意边界。A 为 18 层塔楼，B 为 6 层裙房，地下两层为示意，13/14 层标明保留原功能；未写入医院名称。
+
+体验：[项目白模医院版](https://guangfubill-crypto.github.io/smart-building-twin/?v=4008aa8)。
+
 已发布并通过公网浏览器验收。
 
 ## 2026-10-12 医院素材接入发布

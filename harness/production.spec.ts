@@ -31,6 +31,17 @@ test('production assets and model interactions work under repository URL', async
   await page.getByRole('button', { name: '选择设备 空调机组' }).click();
   await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('AC-01');
   await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.getByRole('button', { name: '切换到 13F', exact: true }).click();
+  await expect(page.locator('.scene-info')).toContainText('保留原有功能');
+  await page.getByRole('button', { name: '筛选给排水', exact: true }).click();
+  await expect(page.locator('.device-pin:visible')).toHaveCount(1);
+  await page.getByRole('button', { name: '选择设备 给排水监测器', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('A-13F-WTR-05');
+  await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.getByRole('button', { name: '显示全部设备' }).click();
+  await expect(page.locator('.device-pin:visible')).toHaveCount(6);
+  mkdirSync('artifacts/harness', { recursive: true });
+  await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/interior-online.png' : 'artifacts/harness/interior-production-local.png' });
   await page.getByRole('button', { name: '3D 院区' }).click();
   await page.getByRole('button', { name: '能源分析', exact: true }).click();
   await expect(page.getByRole('heading', { name: '今日用电趋势' })).toBeVisible();
