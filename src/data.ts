@@ -1,9 +1,10 @@
 export type View = 'overview' | 'equipment' | 'access' | 'energy';
 export const buildings = [
-  { id: 'A', name: 'A座 · 门诊楼', floors: 3, height: 30, x: 0, z: 0, width: 33, depth: 60, devices: 486, occupancy: 1286 },
-  { id: 'B', name: 'B座 · 住院楼', floors: 6, height: 28, x: -39, z: -21, width: 23, depth: 20, devices: 362, occupancy: 946 },
-  { id: 'C', name: 'C座 · 医技楼', floors: 4, height: 20, x: 40, z: -19, width: 21, depth: 19, devices: 298, occupancy: 738 },
+  { id: 'A', name: 'A区 · 塔楼', floors: 18, height: 69.5, x: 24, z: 15, width: 20, depth: 20, devices: 786, occupancy: 1286 },
+  { id: 'B', name: 'B区 · 裙房', floors: 6, height: 26.7, x: -18, z: -6, width: 48, depth: 30, devices: 360, occupancy: 946 },
 ];
+export const floorName = (floor: number) => floor < 0 ? `B${Math.abs(floor)}` : `${floor}F`;
+export const floorScope = (building: string, floor: number) => floor < 0 ? '地下部分改造 · 地下形体与布局为示意' : building === 'A' && [13, 14].includes(floor) ? '保留原有功能 · 非本次改造楼层' : '改造范围 · 楼层布局为示意';
 export const devices = [
   { id: 'AC-01', name: '空调机组', type: 'hvac', status: '正常', x: -12, z: -7, value: '24.6 °C', room: '护士站' },
   { id: 'CAM-02', name: '通道摄像机', type: 'camera', status: '正常', x: 2, z: 3, value: '在线', room: '公共走廊' },

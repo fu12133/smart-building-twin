@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-/** Imported exterior illustration; it is not the hospital's surveyed BIM. */
+/** User-supplied DWG geometry with proposed facade finishes; floor layouts remain illustrative. */
 export class HospitalAsset {
   readonly root = new THREE.Group();
   readonly bounds = new THREE.Box3();
@@ -13,14 +13,21 @@ export class HospitalAsset {
     new GLTFLoader().load(url, asset => {
       if (this.disposed) { HospitalAsset.release(asset.scene); return; }
       const model = asset.scene;
+      const finishes = HospitalAsset.facadeTextures();
       model.traverse(object => {
-        // Omit source ground/road and foreign institution signs; shared resources remain owned.
-        if (/Plane001|Box002|Model.Text/.test(object.name)) object.visible = false;
         if (object instanceof THREE.Mesh) {
           for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-            if (material instanceof THREE.MeshStandardMaterial && material.name === '04_-_Default') {
-              material.roughness = .16; material.metalness = .28;
-              material.color.set('#27748a'); material.envMapIntensity = 1.8;
+            if (material instanceof THREE.MeshStandardMaterial) {
+              if (material.name === 'project-glass') {
+                material.color.set('#ffffff'); material.map = finishes.color;
+                material.emissiveMap = finishes.light; material.emissive.set('#ffffff'); material.emissiveIntensity = .7;
+                material.roughness = .19; material.metalness = .28; material.envMapIntensity = 3.2;
+              } else if (material.name === 'project-metal') {
+                material.color.set('#e5e8dd'); material.metalness = .55; material.roughness = .28;
+                material.emissive.set('#aebccc'); material.emissiveIntensity = .15;
+              } else {
+                material.color.set('#c7c9b9'); material.roughness = .7; material.metalness = .05;
+              }
             }
           }
         }
@@ -32,12 +39,11 @@ export class HospitalAsset {
       if (!Number.isFinite(span) || span <= 0) {
         HospitalAsset.release(model); this.failed = true; this.onError(); return;
       }
-      // Uniform scaling retains architectural proportions. Root translation grounds the model.
-      model.scale.multiplyScalar(60 / span); model.updateMatrixWorld(true);
-      const scaled = HospitalAsset.visibleBounds(model);
-      const center = scaled.getCenter(new THREE.Vector3());
-      this.root.position.set(-center.x, -scaled.min.y, -center.z);
+      // The conversion already calibrates source geometry uniformly; never normalize it again.
+      const center = original.getCenter(new THREE.Vector3());
+      this.root.position.set(-center.x, -original.min.y, -center.z);
       this.root.add(model);
+      this.addFacadeMembers();
       model.traverse(object => {
         if (object instanceof THREE.Mesh) { object.castShadow = true; object.receiveShadow = true; }
       });
@@ -46,6 +52,58 @@ export class HospitalAsset {
     }, undefined, () => {
       if (!this.disposed) { this.failed = true; this.onError(); }
     });
+  }
+
+  private addFacadeMembers() {
+    // Proposed mullions follow the four source tower corners, never a replacement box.
+    const k = 69.5 / 205;
+    const corners = [[41.23, -37.572], [76.514, -77.111], [103.554, -52.887], [68.458, -12.909]].map(([x, y]) => new THREE.Vector3(x * k, 0, -y * k));
+    const poses: THREE.Matrix4[] = [], pose = new THREE.Object3D();
+    for (let side = 0; side < 4; side++) {
+      const a = corners[side], b = corners[(side + 1) % 4], direction = b.clone().sub(a);
+      const width = direction.length(), angle = -Math.atan2(direction.z, direction.x), columns = Math.round(width / 1.45);
+      const center = corners.reduce((sum, corner) => sum.add(corner), new THREE.Vector3()).multiplyScalar(.25);
+      const outward = new THREE.Vector3(direction.z, 0, -direction.x).normalize();
+      if (outward.dot(a.clone().lerp(b, .5).sub(center)) < 0) outward.negate();
+      outward.multiplyScalar(.2); // Keep proposed members clear of the source glazing depth.
+      for (let col = 0; col <= columns; col++) {
+        pose.position.copy(a).lerp(b, col / columns).add(outward); pose.position.y = 37.8;
+        pose.rotation.set(0, angle, 0); pose.scale.set(.075, 63.4, .13); pose.updateMatrix(); poses.push(pose.matrix.clone());
+      }
+      for (let floor = 2; floor <= 18; floor++) {
+        pose.position.copy(a).lerp(b, .5).add(outward); pose.position.y = floor * 69.5 / 18;
+        pose.rotation.set(0, angle, 0); pose.scale.set(width, .06, .14); pose.updateMatrix(); poses.push(pose.matrix.clone());
+      }
+    }
+    const metal = new THREE.MeshStandardMaterial({ color: '#d7e5e8', metalness: .4, roughness: .28, emissive: '#b5d6e1', emissiveIntensity: .6 });
+    const members = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), metal, poses.length);
+    poses.forEach((matrix, index) => members.setMatrixAt(index, matrix)); members.userData.building = 'A'; members.name = '方案幕墙分格';
+    this.root.add(members);
+  }
+
+  private static facadeTextures() {
+    const color = document.createElement('canvas'), light = document.createElement('canvas');
+    color.width = light.width = 512; color.height = light.height = 1024;
+    const c = color.getContext('2d')!, e = light.getContext('2d')!;
+    c.fillStyle = '#174655'; c.fillRect(0, 0, 512, 1024); e.fillStyle = '#000'; e.fillRect(0, 0, 512, 1024);
+    for (let row = 0; row < 4; row++) for (let col = 0; col < 4; col++) {
+      const x = col * 128, y = row * 256, occupied = (row * 7 + col * 3) % 9 < 2;
+      const gradient = c.createLinearGradient(x, y, x + 128, y + 256);
+      gradient.addColorStop(0, occupied ? '#bfc3ad' : '#83a4b7'); gradient.addColorStop(1, occupied ? '#83948d' : '#386079');
+      c.fillStyle = gradient; c.fillRect(x + 4, y + 5, 120, 247);
+      c.fillStyle = '#809098'; c.fillRect(x, y, 3, 256); c.fillRect(x, y, 128, 3);
+      c.fillStyle = '#122c3d'; c.fillRect(x + 4, y + 222, 120, 29);
+      c.fillStyle = '#b6c3c8'; c.fillRect(x, y + 252, 128, 2);
+      if (occupied) {
+        e.fillStyle = '#b39762'; e.fillRect(x + 12, y + 30, 105, 188);
+        for (let j = 0; j < 6; j++) { e.fillStyle = 'rgba(35,35,32,.42)'; e.fillRect(x + 16 + j * 18, y + 30, 3, 188); }
+      }
+    }
+    const texture = (canvas: HTMLCanvasElement) => {
+      const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace;
+      t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+    };
+    return { color: texture(color), light: texture(light) };
   }
 
   dispose() {

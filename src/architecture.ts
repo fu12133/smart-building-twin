@@ -218,6 +218,33 @@ export class Architecture {
     for (let i = 0; i < 7; i++) this.car(parent, -65 + i * 19, i % 2 ? 54 : 44, i);
     this.car(parent, 59, -19, 8, Math.PI / 2);
   }
+  hospitalForecourt(parent: THREE.Group) {
+    // Proposed medical arrival area; positions do not assert the final clinical circulation plan.
+    const white = new THREE.MeshStandardMaterial({ color: '#e0e8e6', roughness: .38, metalness: .15 });
+    const medical = new THREE.MeshStandardMaterial({ color: '#208f81', roughness: .5, emissive: '#157c70', emissiveIntensity: .3 });
+    const glass = new THREE.MeshStandardMaterial({ color: '#366679', metalness: .4, roughness: .2 });
+    this.box(parent, 11, .25, 4.8, -17, 3.15, 3.9, white);
+    this.box(parent, 10.5, .035, 4.4, -17, 3, 3.9, this.warm, false);
+    for (const x of [-22, -12]) this.box(parent, .15, 3, .15, x, 1.5, 5.6, this.metal);
+    this.box(parent, 1.3, .45, .08, -23.3, 3.8, 5.12, medical, false);
+    this.box(parent, .45, 1.3, .08, -23.3, 3.8, 5.12, medical, false);
+    this.lightPool(parent, -17, 6, 5);
+    const green = new THREE.MeshStandardMaterial({ color: '#466039', roughness: 1 });
+    for (const x of [-32, -5, 7]) {
+      this.box(parent, 5.5, .4, 2.1, x, .2, 18, white);
+      this.box(parent, 5.2, .42, 1.8, x, .52, 18, green);
+      this.box(parent, 4, .18, .6, x, .85, 20, this.bronze);
+    }
+    const vehicle = new THREE.Group(); vehicle.position.set(-17, 0, 11); vehicle.rotation.y = .15; parent.add(vehicle);
+    this.box(vehicle, 2.2, 1.7, 4.8, 0, 1.65, 0, white);
+    this.box(vehicle, 2.12, .6, .06, 0, 1.85, 2.42, glass);
+    this.box(vehicle, 2.25, .18, 4.65, 0, 1.1, 0, medical);
+    this.box(vehicle, 1.3, .18, .45, 0, 2.58, 1.2, medical);
+    for (const x of [-1.1, 1.1]) for (const z of [-1.45, 1.5]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, .22, 16), this.dark);
+      wheel.rotation.z = Math.PI / 2; wheel.position.set(x, .4, z); vehicle.add(wheel);
+    }
+  }
   private lightPool(parent: THREE.Group, x: number, z: number, size: number) {
     const c = document.createElement('canvas'); c.width = c.height = 64;
     const ctx = c.getContext('2d')!, g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -300,6 +327,7 @@ export class Architecture {
     for (let i = 0; i < 12; i++) trees.push([49, -49 + i * 7]);
     for (let i = 0; i < 7; i++) trees.push([-66, -35 + i * 9]);
     for (let i = 0; i < 7; i++) trees.push([-48 + i * 13, 44 + noise(i) * 3]);
+    trees.push([-32, 18], [-5, 18], [7, 18]);
     const leafGeometry = new THREE.PlaneGeometry(.95, 2.2);
     const uv = leafGeometry.getAttribute('uv');
     // Only the three leafy sprays on the left of the atlas; exclude its solid stem strip.

@@ -51,3 +51,5 @@ footer{position:relative;z-index:3;height:35px;color:#8eacbe;pointer-events:none
 /* Author attribution remains usable above the noninteractive footer overlay. */
 .asset-credit { pointer-events: auto; color: #92b8c3; text-decoration: none; font-size: 10px; }
 .asset-credit:hover { color: #58dfd0; text-decoration: underline; }
+
+.project-scope{font-size:9px;line-height:1.4;color:#a4c7c8;padding:3px 0;border-top:1px solid #486b7c45}.help-note{max-height:180px;overflow:auto}

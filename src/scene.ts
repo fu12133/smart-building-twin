@@ -158,23 +158,22 @@ export class BuildingScene {
   }
   private createCity() {
     this.architecture.ground(this.city, true);
+    this.architecture.hospitalForecourt(this.city);
     for (const b of buildings) {
       const tower = new THREE.Group(); tower.position.set(b.x, 0, b.z); tower.userData.building = b.id;
       this.city.add(tower); this.towers.set(b.id, tower);
-      if (b.id !== 'A') this.architecture.tower(tower, b);
       const ring = new THREE.Mesh(new THREE.RingGeometry(17, 17.22, 96), new THREE.MeshBasicMaterial({ color: 0x4adcf3, side: THREE.DoubleSide, transparent: true, opacity: .7 }));
       ring.rotation.x = -Math.PI / 2; ring.position.y = .08; tower.add(ring); this.rings.set(b.id, ring);
-      this.addLabel(b.name, new THREE.Vector3(b.x, b.height + 11, b.z), false, () => this.options.onSelect(b.id), 'building-label');
+      this.addLabel(b.name, new THREE.Vector3(b.x, b.id === 'B' ? 17.5 : 78, b.z), false, () => this.options.onSelect(b.id), 'building-label');
       this.labelNodes[this.labelNodes.length - 1].element.dataset.building = b.id;
     }
-    this.hospital = new HospitalAsset(import.meta.env.BASE_URL + 'assets/hospital.glb', () => {
-      this.towers.get('A')!.add(this.hospital.root);
+    this.hospital = new HospitalAsset(import.meta.env.BASE_URL + 'assets/project-hospital.glb', () => {
+      // Source geometry uses shared project coordinates rather than the zone label anchors.
+      this.city.add(this.hospital.root);
       this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
       this.options.onModelLoaded();
     }, () => this.options.onError('医院模型加载失败，请检查网络后重新加载场景。'));
-    this.hospitalSign(this.towers.get('A')!, '门诊楼 · 急诊入口', 1, 12.5, 27.4, 12);
-    this.hospitalSign(this.towers.get('B')!, '住院楼', 0, 4.6, 12.5, 10);
-    this.hospitalSign(this.towers.get('C')!, '医技楼', 0, 4.6, 12, 10);
+    this.hospitalSign(this.city, '门急诊入口（方案）', -17, 3.8, 5.1, 10);
     this.architecture.context(this.surroundings);
     for (let i = 0; i < 6; i++) {
       const p = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .3, 16), new THREE.MeshBasicMaterial({ color: i === 2 ? 0xffaa64 : 0x40e5d4 }));
@@ -266,8 +265,8 @@ export class BuildingScene {
     const auto = this.controls.autoRotate; this.controls.autoRotate = false;
     this.controls.enableDamping = false;
     const fit = Math.max(1, Math.min(1.85, 1.05 / this.camera.aspect));
-    this.camera.position.set(...(this.mode === '3d' ? [105 * fit, 72 * fit, 138 * fit] : [42 * fit, 62 * fit, 58 * fit]) as [number, number, number]);
-    this.controls.target.set(0, this.mode === '3d' ? 14 : 0, 0); this.controls.update();
+    this.camera.position.set(...(this.mode === '3d' ? [-105 * fit, 80 * fit, 138 * fit] : [42 * fit, 62 * fit, 58 * fit]) as [number, number, number]);
+    this.controls.target.set(0, this.mode === '3d' ? 27 : 0, 0); this.controls.update();
     this.controls.enableDamping = true; this.controls.autoRotate = auto;
   }
   zoom(factor: number) {
@@ -289,7 +288,7 @@ export class BuildingScene {
     if (e.button !== 0 || this.pointerDown.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) > 5) return;
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.raycaster.setFromCamera(new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1), this.camera);
-    const hit = this.raycaster.intersectObjects(this.mode === '3d' ? [...this.towers.values()] : this.floorMap.children, true).find(candidate => {
+    const hit = this.raycaster.intersectObjects(this.mode === '3d' ? [this.hospital.root] : this.floorMap.children, true).find(candidate => {
       for (let object: THREE.Object3D | null = candidate.object; object; object = object.parent) if (!object.visible) return false;
       return true;
     });

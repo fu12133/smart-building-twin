@@ -1,0 +1,6 @@
+- [x] Decode DWG, inspect meshes and record source/calibration assumptions.
+- [x] Convert source geometry to GLB and preserve provenance.
+- [x] Add hospital facade finishes and omit institution names.
+- [x] Integrate source A/B zones, project facts and bounded basement/floor semantics.
+- [x] Validate specifications, build, harness and rendered angles.
+- [ ] Publish, record actual public evidence and archive change.

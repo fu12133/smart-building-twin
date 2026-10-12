@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 
 // Visual harness: real pointer/wheel operations, no scene-state mutation.
 mkdirSync('artifacts/harness', { recursive: true });
-const browser = await chromium.launch({ ...(process.platform === 'win32' ? { channel: 'msedge' } : {}), args: ['--use-angle=swiftshader'] });
+const browser = await chromium.launch({ ...(process.platform === 'win32' ? { channel: 'msedge' } : {}), args: process.env.NATIVE_GPU ? [] : ['--use-angle=swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
@@ -14,6 +14,11 @@ try {
   await canvas.waitFor();
   await page.locator('.model-state').filter({ hasText: '医院模型已加载' }).waitFor();
   await page.waitForTimeout(2500);
+  const gpu = await canvas.evaluate(element => {
+    const gl = element.getContext('webgl2');
+    const info = gl?.getExtension('WEBGL_debug_renderer_info');
+    return info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'GPU identifier unavailable';
+  });
   await page.screenshot({ path: 'artifacts/harness/architecture-overview.png', fullPage: true });
   const rect = await canvas.boundingBox();
   await page.mouse.move(rect.x + rect.width * .5, rect.y + rect.height * .55);
@@ -24,5 +29,5 @@ try {
   await page.mouse.up(); await page.waitForTimeout(1500);
   await page.screenshot({ path: 'artifacts/harness/architecture-reverse.png', clip: await canvas.boundingBox() });
   if (errors.length) throw new Error(errors.join('\n'));
-  console.log('Architectural overview, zoom and reverse-angle screenshots captured; no browser errors.');
+  console.log('Architectural overview, zoom and reverse-angle screenshots captured; no browser errors. GPU: ' + gpu);
 } finally { await browser.close(); }

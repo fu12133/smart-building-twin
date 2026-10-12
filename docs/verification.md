@@ -96,3 +96,15 @@ The desktop, floor-device and phone screenshots were visually inspected. Compare
 - Geometry, IoT values and alarms are explicitly synthetic. Repeated floor diagrams provide demonstration semantics, not engineering BIM accuracy.
 - Full automated WebGL acceptance uses software rendering. Native RTX 5090 rendering and pointer pixel changes were separately checked; hardware FPS and physical touch-device gestures remain unmeasured.
 - `npm audit --omit=dev`: 0 vulnerabilities. Full audit reports 4 high-severity entries in OpenSpec's transitive `fast-glob → micromatch → braces` development-tool chain. Registry version 3.0.3 of braces has no patched replacement in the current dependency tree; avoid running the CLI against untrusted pathological glob input. This dependency is excluded from the browser production bundle.
+
+
+## 2026-10-12 项目白模医院方案
+
+- 用户提供 `项目白模.dwg`，SHA-256 `bdab765f1b3c4a486557809395292e1295641687490bcb85f8bc509a6055e564`，3,257,817 bytes，AC1032。LibreDWG 0.14 成功解码 573 对象、42 个 MESH；未将原 DWG/中间 JSON 上传仓库。
+- 三维网格检查识别主体 584，以及城市 263、地面 392、位移副本 566 等。保留连接塔楼/围合裙房 584；另外的 564/568/569 与主体幕墙重叠，实际反向截图出现 z-fighting，移除这些重复网格后反向截图稳定。方案细分幕墙杆件沿源塔楼四角生成。
+- 转换脚本只需 Python 标准库，等比 scale=69.5/205；输出 271,584 bytes、2,783 triangles，GLB hash `c71ab31043f9c092247c3547537ab76ad91b2ebe70028129e261e4aa09db1e36`。转换模型含屋顶构件约 73.91 m，包围盒 72.59×52.29 m，和资料 70×38 m 不一致，已在帮助/来源清单中说明，没有非等比拉伸。
+- 资料中的塔楼 18 层、裙房约 6 层、地下 2 层、改造面积 28,426 m²、投资 2.87 亿元、13/14 层保留原功能已接入 UI。层数来自资料，未验证白模层级；地下形体、各层平面均为示意；没有实时 BIM/IoT 接口。用户表示医院名称尚未提供，明确不填写。
+- 第一轮 harness 14/15 passed；新增项目范围文本导致 900px 高屏右侧面板下边缘超出验收线 11px。缩减范围文本间距后相关 V2/W1 2/2 passed (14.3s)。另一次运行前 10 项通过后，Windows Vite 文件监视器在复制 `source-white-inspection.png` 时触发 EBUSY 退出，后 6 项连接失败；已忽略生成截图、trace 与报告目录，避免这些文件参与源码监视。
+- 修复后完整 `npm run harness` **16/16 passed (1.6 min)**。追加真实网格拾取 W3，并将方案幕墙杆件外移 0.2 m，避免与源玻璃发生深度重叠；V1/W3 **2/2 passed (13.8s)**。新增来源 hash、源节点/分区、校准包围盒以及 18F/13F/14F/B2 的验收。
+- `npm run spec:validate` **4/4 passed**；仓库子路径生产构建通过，预期主 JS `index-DFEbwJP4.js`、CSS `index-Ddj0XnoS.css`。
+- Edge 原生 GPU **NVIDIA RTX 5090 / ANGLE D3D11** 实际捕获默认、滚轮近景和拖拽背面三张截图，已逐张检查，建筑完整可见，幕墙无此前反向重叠闪烁，入口/救护车/绿化可见，浏览器无错误；未测 FPS。公网结果待补。

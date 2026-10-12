@@ -1,0 +1,36 @@
+{
+  "sourceName": "项目白模.dwg",
+  "sourceSha256": "bdab765f1b3c4a486557809395292e1295641687490bcb85f8bc509a6055e564",
+  "decoder": "LibreDWG 0.14",
+  "sourceUnitsHeader": 6,
+  "sourceHandles": [
+    584
+  ],
+  "uniformScale": 0.33902439024390246,
+  "structuralTowerHeight": 69.5,
+  "bounds": {
+    "min": [
+      -36.29527271549876,
+      -4.661801548146342e-06,
+      -26.142887413210985
+    ],
+    "max": [
+      36.29546929336176,
+      73.9068670133265,
+      26.143190039657966
+    ]
+  },
+  "triangles": 2783,
+  "glbSha256": "c71ab31043f9c092247c3547537ab76ad91b2ebe70028129e261e4aa09db1e36",
+  "projectSummary": {
+    "eastWest": 70,
+    "northSouth": 38,
+    "podiumHeight": 26.7,
+    "towerHeight": 69.5,
+    "abovegroundFloors": 18,
+    "basementFloors": 2,
+    "renovationArea": 28426,
+    "investmentYiYuan": 2.87
+  },
+  "calibrationNote": "保留白模比例，以结构塔楼 205 坐标单位对应 69.5 m；屋顶构件高于结构高度。白模包围盒与项目表 70×38 m 有差异，未进行非等比拉伸。立面材质和医疗入口为方案示意。"
+}

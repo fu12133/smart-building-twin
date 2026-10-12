@@ -22,7 +22,7 @@ async function ready(page: Page) {
   await expect.poll(async () => (await snapshot(page)).assetsReady, { timeout: initializationTimeout }).toBe(true);
   expect((await snapshot(page)).objects).toBeGreaterThan(1000);
   await expect(page.locator('.model-state')).toContainText('医院模型已加载');
-  await expect(page.locator('.asset-credit')).toContainText('Er.B.Nijithkumar');
+  await expect(page.locator('.asset-credit')).toContainText('项目白模.dwg');
 }
 
 test('V1: real pointer rotation changes camera and rendered image', async ({ page }) => {
@@ -82,20 +82,20 @@ test('V3: automatic rotation starts and actually stops', async ({ page }) => {
 
 test('V4: select building, switch floor, select device and restore 3D pose', async ({ page }) => {
   await ready(page);
-  await page.getByRole('button', { name: '选择B座' }).click();
-  await expect(page.locator('.building-name')).toContainText('B座 · 住院楼');
+  await page.getByRole('button', { name: '选择B区' }).click();
+  await expect(page.locator('.building-name')).toContainText('B区 · 裙房');
   expect((await snapshot(page)).selected).toBe('B');
   const before = await snapshot(page);
   await page.getByRole('button', { name: '2.5D 楼层' }).click();
   await page.getByLabel('选择楼层').selectOption('3');
-  await expect(page.getByRole('heading', { name: 'B座 · 3F 电子地图' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'B区 · 3F 电子地图' })).toBeVisible();
   await page.getByRole('button', { name: '选择设备 烟感探测器' }).click();
   await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('B-3F-SMK-03');
   await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('告警');
   await page.screenshot({ path: 'artifacts/harness/floor-device-desktop.png' });
   await page.getByRole('button', { name: '关闭设备详情' }).click();
   await page.getByLabel('选择楼层').selectOption('6');
-  await expect(page.getByRole('heading', { name: 'B座 · 6F 电子地图' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'B区 · 6F 电子地图' })).toBeVisible();
   await page.getByRole('button', { name: '3D 院区' }).click();
   await expect.poll(async () => delta((await snapshot(page)).camera, before.camera)).toBeLessThan(.1);
 });
@@ -129,11 +129,11 @@ test('D1: view navigation, alarm location and floor limits are linked', async ({
   await page.getByRole('button', { name: /烟感探测器异常/ }).click();
   await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('SMK-03');
   await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.getByLabel('选择楼宇').selectOption('A');
+  await page.getByLabel('选择楼层').selectOption('18');
   await page.getByLabel('选择楼宇').selectOption('B');
-  await page.getByLabel('选择楼层').selectOption('6');
-  await page.getByLabel('选择楼宇').selectOption('C');
-  await expect(page.getByLabel('选择楼层')).toHaveValue('4');
-  await expect(page.getByRole('heading', { name: 'C座 · 4F 电子地图' })).toBeVisible();
+  await expect(page.getByLabel('选择楼层')).toHaveValue('6');
+  await expect(page.getByRole('heading', { name: 'B区 · 6F 电子地图' })).toBeVisible();
   await page.getByRole('button', { name: /空调温度超出阈值/ }).click();
   await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('A-2F-AC-01');
 });
@@ -212,7 +212,7 @@ test('H1: delayed hospital model completing after reload leaves a usable single 
   let requests = 0;
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
-  await page.route('**/assets/hospital.glb', async route => {
+  await page.route('**/assets/project-hospital.glb', async route => {
     requests++; const response = await route.fetch(); await gate; await route.fulfill({ response });
   });
   await page.goto('/');
@@ -232,23 +232,77 @@ test('H1: delayed hospital model completing after reload leaves a usable single 
 
 test('H2: invalid hospital asset shows actionable failure and reload recovers', async ({ page }) => {
   test.setTimeout(process.env.CI ? 120000 : 45000);
-  await page.route('**/assets/hospital.glb', route => route.fulfill({ status: 200, contentType: 'model/gltf-binary', body: 'invalid model' }));
+  await page.route('**/assets/project-hospital.glb', route => route.fulfill({ status: 200, contentType: 'model/gltf-binary', body: 'invalid model' }));
   await page.goto('/');
   await expect(page.getByRole('alert')).toContainText('医院模型加载失败');
-  await page.unroute('**/assets/hospital.glb');
+  await page.unroute('**/assets/project-hospital.glb');
   await page.getByRole('button', { name: '重新加载' }).click();
   await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().assetsReady ?? false), { timeout: initializationTimeout }).toBe(true);
   await expect(page.getByRole('alert')).toBeHidden();
   await expect(page.locator('.scene-host canvas')).toHaveCount(1);
 });
 
-test('H3: hidden source ground does not capture empty-campus building selection', async ({ page }) => {
+test('H3: empty campus foreground preserves source zone selection', async ({ page }) => {
   await ready(page);
-  await page.getByRole('button', { name: '选择C座' }).click();
+  await page.getByRole('button', { name: '选择B区' }).click();
   const canvas = page.locator('.scene-host canvas');
   const rect = (await canvas.boundingBox())!;
   // Empty foreground plaza in the inspected default overview, away from overlays and buildings.
   await canvas.click({ position: { x: rect.width * .72, y: rect.height * .79 } });
-  expect((await snapshot(page)).selected).toBe('C');
-  await expect(page.locator('.building-name')).toContainText('医技楼');
+  expect((await snapshot(page)).selected).toBe('B');
+  await expect(page.locator('.building-name')).toContainText('裙房');
+});
+
+test('W1: project scope, retained floors and basements follow the supplied brief', async ({ page }) => {
+  await ready(page);
+  await expect(page.locator('.small-stats')).toContainText('28,426');
+  await expect(page.locator('.small-stats')).toContainText('18+2');
+  await expect(page.getByLabel('选择楼宇').locator('option')).toHaveCount(2);
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  await page.getByLabel('选择楼层').selectOption('18');
+  await expect(page.getByRole('heading', { name: 'A区 · 18F 电子地图' })).toBeVisible();
+  for (const floor of ['13', '14']) {
+    await page.getByLabel('选择楼层').selectOption(floor);
+    await expect(page.locator('.project-scope')).toContainText('保留原有功能');
+  }
+  await page.getByLabel('选择楼层').selectOption('-2');
+  await expect(page.getByRole('heading', { name: 'A区 · B2 电子地图' })).toBeVisible();
+  await expect(page.locator('.project-scope')).toContainText('地下部分改造');
+  await page.getByRole('button', { name: '选择设备 空调机组' }).click();
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('A-B2-AC-01');
+  await page.getByRole('button', { name: '关闭设备详情' }).click();
+  await page.getByLabel('选择楼宇').selectOption('B');
+  await expect(page.getByLabel('选择楼层')).toHaveValue('-2');
+  await expect(page.getByLabel('选择楼层').locator('option[value="0"]')).toHaveCount(0);
+  await expect(page.getByLabel('选择楼层').locator('option[value="7"]')).toHaveCount(0);
+  await page.getByRole('button', { name: '操作帮助' }).click();
+  await expect(page.getByRole('dialog', { name: '模型操作帮助' })).toContainText('未强行拉伸');
+});
+
+test('W2: packaged mesh retains traceable source geometry and project calibration', async ({ page }) => {
+  const manifest = await (await page.request.get('/assets/project-model.json')).json();
+  const binary = await (await page.request.get('/assets/project-hospital.glb')).body();
+  expect(manifest.sourceName).toBe('项目白模.dwg');
+  expect(manifest.sourceSha256).toBe('bdab765f1b3c4a486557809395292e1295641687490bcb85f8bc509a6055e564');
+  expect(createHash('sha256').update(binary).digest('hex')).toBe(manifest.glbSha256);
+  expect(manifest.sourceHandles).toEqual([584]);
+  expect(manifest.uniformScale * 205).toBeCloseTo(69.5, 6);
+  expect(manifest.bounds.max[0] - manifest.bounds.min[0]).toBeCloseTo(72.59, 1);
+  expect(binary.readUInt32LE(0)).toBe(0x46546c67);
+  const jsonLength = binary.readUInt32LE(12);
+  const gltf = JSON.parse(binary.subarray(20, 20 + jsonLength).toString());
+  expect([...new Set(gltf.nodes.map((node: any) => node.extras.building))].sort()).toEqual(['A', 'B']);
+  expect(gltf.nodes.every((node: any) => node.extras.sourceHandle === 584)).toBe(true);
+  expect(gltf.accessors.filter((a: any) => a.type === 'VEC3').reduce((sum: number, a: any) => sum + a.count, 0) / 6).toBe(manifest.triangles);
+});
+
+test('W3: source tower and podium meshes select their own zones through pointer picking', async ({ page }) => {
+  await ready(page);
+  const canvas = page.locator('.scene-host canvas'), rect = (await canvas.boundingBox())!;
+  await page.getByRole('button', { name: '选择B区' }).click();
+  // Inspected default view: tower glass and podium roof, away from floating labels/overlays.
+  await canvas.click({ position: { x: rect.width * .63, y: rect.height * .4 } });
+  await expect(page.locator('.building-name')).toContainText('A区 · 塔楼');
+  await canvas.click({ position: { x: rect.width * .42, y: rect.height * .64 } });
+  await expect(page.locator('.building-name')).toContainText('B区 · 裙房');
 });
