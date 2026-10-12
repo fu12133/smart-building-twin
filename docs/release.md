@@ -2,6 +2,19 @@
 
 已发布并通过公网浏览器验收。
 
+## 2026-10-12 建筑夜景与沉浸式场景发布
+
+- 已部署源码提交：`ad91b652813217c6b34f83c64304c3aadd7cb642`；应用运行代码与 `26bcdac` 相同，后续两次修正仅涉及验收等待方式及记录。
+- 成功工作流：[38216463184](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38216463184)。Linux Chromium + SwiftShader **11 / 11 passed (7.2 min)**；构建任务 8m6s，部署 12s。规格校验与仓库子路径生产构建通过。
+- 公网 HTML 已核对实际引用 `index-CnOG6jVV.js` 和 `index-CxIjskGN.css`。
+- 真实公网生产 harness：**1 / 1 passed (18.1 s)**，场景三项本地资产均 HTTP 200，实际拖拽改变图像，楼层/设备、导航和复位可用，控制台及资源无错误，生产页面没有开发诊断入口。
+- 公网另使用 Edge / RTX 5090 硬件 GPU 检查：实际指针拖拽改变像素，复位可用，三项资产 HTTP 200，页面与控制台无错误。硬件帧率未测量。
+- 公网默认、放大、背面与硬件 GPU 截图已实际捕获并检查，位于 `artifacts/harness/architecture-*.png`；生产交互截图为 `production-online.png`。
+
+本次更新包括明亮细框玻璃幕墙、稀疏暖色办公灯、真实弧形石材商业裙楼、天窗、叶片绿化、夜景反射与半透明浮动面板。全部保留真实几何及指针旋转。模型和业务数据仍明确标识为演示内容，建筑细节与参考图的专业 BIM 渲染仍有差距。
+
+使用地址：[打开智慧楼宇](https://guangfubill-crypto.github.io/smart-building-twin/)。
+
 ## 2026-10-12 建筑画质增强发布
 
 - 已部署应用源码提交：`620ac962ad8cc6371bbab967635ab5396d5f3244`。

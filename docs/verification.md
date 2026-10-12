@@ -38,6 +38,8 @@ Downloaded traces further confirm that V1's camera and pixel-change assertions c
 
 Run `38215635693` passed **10 / 11 (7.2 min)**, including V1 (84.7 seconds) and V8 (33.4 seconds). V6's post-recovery first-frame poll still used the UI wait budget and timed out. It now consistently uses the same cold GPU initialization budget as the other first-frame waits; recovery UI and browser-error assertions remain unchanged.
 
+Final recovery check passed locally **1 / 1 (12.9 s)**. Cloud run **38216463184 passed all 11 / 11 (7.2 min)**, including V6 (37.1 s) and V8 (33.5 s), followed by successful build and Pages deployment. Live HTML matches the expected `index-CnOG6jVV.js`. Actual public production harness passed **1 / 1 (18.1 s)** with all three assets HTTP 200, no browser/resource errors and no production diagnostic accessor. Public default/close/reverse screenshots were inspected. Native Edge / RTX 5090 testing was then repeated on the actual public URL: actual pointer pixel change, reset and asset responses passed without browser errors. The final `architecture-native-gpu.png` is captured from this public hardware-rendered page; FPS remains unmeasured. The completed change is archived after these checks.
+
 `npm run build` passed TypeScript validation and production bundling. `npm run spec:validate` passed OpenSpec strict validation. `npm run harness` passed **9 / 9** acceptance tests in **20.8 s**, using Microsoft Edge headless + SwiftShader on Windows. The final run produced no unexpected browser console errors or uncaught exceptions.
 
 | Requirement | Evidence |

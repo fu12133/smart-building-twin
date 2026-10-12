@@ -32,3 +32,10 @@ The repository MUST provide a single command that launches browser acceptance te
 #### Scenario: Run harness
 - **WHEN** the developer runs npm run harness
 - **THEN** Playwright validates user interactions, captures visual evidence, and exits nonzero on failed assertions or unexpected browser errors
+
+### Requirement: Immersive desktop architectural view
+On desktop the architecture MUST occupy a large canvas behind translucent operational overlays. Navigation, building/floor selection and camera controls MUST remain usable. Mobile MUST retain a scrollable scene and dashboard without horizontal overflow.
+
+#### Scenario: Desktop overlays and rotation
+- **WHEN** the user opens the desktop overview and drags the unobstructed central region
+- **THEN** the scene fills the workspace, the camera rotates, and selectors and floating panels remain readable and clickable
