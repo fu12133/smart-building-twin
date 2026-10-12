@@ -5,6 +5,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { buildings, devices } from './data';
 import { Architecture } from './architecture';
 
@@ -42,6 +44,7 @@ export class BuildingScene {
   private composer: EffectComposer;
   private bloom: UnrealBloomPass;
   private output: OutputPass;
+  private antialias?: ShaderPass;
   private hdrSettled = false;
   private hdrSource: THREE.DataTexture;
 
@@ -76,12 +79,16 @@ export class BuildingScene {
       if (!this.destroyed) { this.hdrSettled = true; this.renderDirty = true; }
       // Retain the procedural reflection environment on a failed optional asset.
     });
-    const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: Math.min(4, this.renderer.capabilities.maxSamples) });
+    const gl = this.renderer.getContext(), info = gl.getExtension('WEBGL_debug_renderer_info');
+    const software = info && /swiftshader|llvmpipe|softpipe/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL));
+    // Floating-point multisample resolves are costly on software GPUs. Both paths keep edge smoothing.
+    const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: software ? 0 : Math.min(4, this.renderer.capabilities.maxSamples) });
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .14, .2, 1.65);
     this.composer.addPass(this.bloom);
     this.output = new OutputPass(); this.composer.addPass(this.output);
+    if (software) { this.antialias = new ShaderPass(FXAAShader); this.composer.addPass(this.antialias); }
     // Include scene and postprocessing triangles in the read-only verification counter.
     this.renderer.info.autoReset = false;
     const canvas = this.renderer.domElement;
@@ -269,12 +276,18 @@ export class BuildingScene {
     if (!w || !h) return;
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
+    const ratio = this.renderer.getPixelRatio();
+    this.bloom.setSize(w * ratio * .5, h * ratio * .5);
+    this.antialias?.uniforms['resolution'].value.set(1 / (w * ratio), 1 / (h * ratio));
     this.renderDirty = true;
     if (this.frame === 0 && this.controls) this.reset();
   }
   private animate = (time: number) => {
     if (this.destroyed) return;
-    this.controls.update(this.lastTime ? Math.min((time - this.lastTime) / 1000, 0.05) : 1 / 60); this.lastTime = time;
+    const elapsed = this.lastTime ? Math.min((time - this.lastTime) / 1000, .25) : 1 / 60;
+    // Preserve the 60 Hz easing on hardware while avoiding a long tail of expensive software frames.
+    this.controls.dampingFactor = 1 - Math.pow(1 - .09, elapsed * 60);
+    this.controls.update(Math.min(elapsed, .05)); this.lastTime = time;
     // Static architecture needs no repeated GPU work. Controls still tick for smooth damping/patrol.
     if (this.renderDirty) {
       this.renderer.info.reset(); this.composer.render(); this.frame++;
@@ -289,7 +302,7 @@ export class BuildingScene {
     }
     this.frameId = requestAnimationFrame(this.animate);
   };
-  snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, assetsReady: this.hdrSettled && this.architecture.assetsReady }; }
+  snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, assetsReady: this.hdrSettled && this.architecture.assetsReady && !this.renderDirty }; }
   dispose() {
     this.destroyed = true; cancelAnimationFrame(this.frameId); this.observer.disconnect(); this.controls.dispose(); this.disposables.forEach(fn => fn());
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
@@ -305,6 +318,7 @@ export class BuildingScene {
     this.environmentTarget.dispose(); this.architecture.dispose();
     this.hdrSource.dispose();
     this.bloom.dispose(); this.output.dispose(); this.composer.dispose();
+    this.antialias?.dispose();
     this.renderer.dispose(); this.renderer.domElement.remove(); this.labels.remove();
   }
 }

@@ -177,10 +177,12 @@ test('V7: idle scene stops GPU redraws and controls/layers redraw visible geomet
 
 test('V8: delayed night asset finishing after scene reload leaves a usable single renderer', async ({ page }) => {
   let requests = 0;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/assets/night-city.hdr', async route => {
     requests++;
     const response = await route.fetch();
-    await new Promise(resolve => setTimeout(resolve, 6000));
+    await gate;
     await route.fulfill({ response });
   });
   await page.goto('/');
@@ -188,6 +190,7 @@ test('V8: delayed night asset finishing after scene reload leaves a usable singl
   expect((await snapshot(page)).assetsReady).toBe(false);
   await page.locator('.scene-host canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
   await page.getByRole('button', { name: '重新加载' }).click();
+  release(); // Finish the old request only after actual scene teardown/reload, regardless of GPU speed.
   await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().assetsReady ?? false)).toBe(true);
   await page.waitForTimeout(700);
   await expect(page.locator('.scene-host canvas')).toHaveCount(1);

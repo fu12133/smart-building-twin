@@ -308,14 +308,15 @@ export class Architecture {
     const transform = new THREE.Object3D();
     const bark = new THREE.MeshStandardMaterial({ color: 0x61583f, roughness: 1 });
     const twigGeometry = new THREE.CylinderGeometry(.045, .12, 1, 5);
+    const branches = new THREE.InstancedMesh(twigGeometry, bark, trees.length * 6);
     trees.forEach(([x, z], i) => {
       const size = .82 + noise(i + 45) * .47, ht = 3.2 * size, radius = 2.3 * size;
       trunks.push([x, ht / 2, z, .25 * size, ht, .25 * size]);
       for (let j = 0; j < 6; j++) {
         const a = j * 2.4;
-        const branch = new THREE.Mesh(twigGeometry, bark);
-        branch.position.set(x + Math.cos(a) * .65, ht + .15, z + Math.sin(a) * .65);
-        branch.rotation.set(Math.cos(a) * .75, 0, Math.sin(a) * .75); branch.scale.y = 2.1 * size; parent.add(branch);
+        transform.position.set(x + Math.cos(a) * .65, ht + .15, z + Math.sin(a) * .65);
+        transform.rotation.set(Math.cos(a) * .75, 0, Math.sin(a) * .75); transform.scale.set(1, 2.1 * size, 1);
+        transform.updateMatrix(); branches.setMatrixAt(i * 6 + j, transform.matrix);
       }
       for (let j = 0; j < cardsPerTree; j++) {
         const a = j * 2.399, r = radius * Math.sqrt(noise(i * 333 + j));
@@ -328,6 +329,7 @@ export class Architecture {
       }
     });
     this.batch(parent, trunks, bark, new THREE.CylinderGeometry(.5, .7, 1, 7), true);
+    parent.add(branches);
     // Alpha-tested cards cast cut-out shadows, and remain real geometry in every orbit direction.
     cards.castShadow = true; cards.receiveShadow = true; parent.add(cards);
     // Small pedestrian silhouettes establish scale without obscuring the plaza.

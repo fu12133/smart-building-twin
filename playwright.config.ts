@@ -3,7 +3,8 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './harness',
   testIgnore: 'production.spec.ts',
-  timeout: 45000,
+  // Software-GPU compilation and explicit captures count toward the whole test, not UI latency.
+  timeout: process.env.CI ? 90000 : 45000,
   expect: { timeout: 12000 },
   fullyParallel: false,
   workers: 1,
