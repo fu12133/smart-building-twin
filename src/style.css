@@ -48,3 +48,6 @@ footer{position:relative;z-index:3;height:35px;color:#8eacbe;pointer-events:none
 .building-selector{left:240px;right:241px;gap:8px;padding:9px}.scene-bottom{left:240px;right:241px}.scene-error{left:240px;right:241px}
 }
 }
+/* Author attribution remains usable above the noninteractive footer overlay. */
+.asset-credit { pointer-events: auto; color: #92b8c3; text-decoration: none; font-size: 10px; }
+.asset-credit:hover { color: #58dfd0; text-decoration: underline; }

@@ -8,13 +8,14 @@ test('production assets and model interactions work under repository URL', async
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('response', r => { if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`); });
-  const assets = ['night-city.hdr', 'leaves-color.jpg', 'leaves-alpha.png'];
+  const assets = ['night-city.hdr', 'leaves-color.jpg', 'leaves-alpha.png', 'hospital.glb'];
   const assetResponses = Promise.all(assets.map(name => page.waitForResponse(r => r.url() === new URL('assets/' + name, baseURL!).href)));
   await page.goto(baseURL!);
   for (const response of await assetResponses) expect(response.status(), response.url()).toBe(200);
-  await expect(page.getByRole('heading', { name: '智慧楼宇综合管理平台' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '智慧医院综合管理平台' })).toBeVisible();
   const canvas = page.locator('.scene-host canvas');
   await expect(canvas).toBeVisible();
+  await expect(page.locator('.model-state')).toContainText('医院模型已加载');
   await expect(page.getByRole('button', { name: '选择A座' })).toBeVisible();
   expect(await page.evaluate(() => typeof (window as any).__BUILDING_HARNESS__)).toBe('undefined');
   const rect = (await canvas.boundingBox())!;
@@ -30,10 +31,10 @@ test('production assets and model interactions work under repository URL', async
   await page.getByRole('button', { name: '选择设备 空调机组' }).click();
   await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('AC-01');
   await page.getByRole('button', { name: '关闭设备详情' }).click();
-  await page.getByRole('button', { name: '3D 园区' }).click();
+  await page.getByRole('button', { name: '3D 院区' }).click();
   await page.getByRole('button', { name: '能源分析', exact: true }).click();
   await expect(page.getByRole('heading', { name: '今日用电趋势' })).toBeVisible();
-  await page.getByRole('button', { name: '园区总览', exact: true }).click();
+  await page.getByRole('button', { name: '院区总览', exact: true }).click();
   await page.waitForTimeout(1200); // Let ECharts' entrance animation finish before capturing evidence.
   mkdirSync('artifacts/harness', { recursive: true });
   await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/production-online.png' : 'artifacts/harness/production-local.png' });

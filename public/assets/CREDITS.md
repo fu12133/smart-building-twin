@@ -1,6 +1,12 @@
 # Scene asset credits
 
-These textures are packaged locally. The browser never calls an asset API or remote image server. The building, podium and landscaping geometry is authored procedurally for this demonstration.
+These assets are packaged locally. The browser never calls an asset API or remote image server. The outpatient building uses the licensed hospital model below; inpatient/medical-tech buildings and landscape are procedural demonstration geometry.
+
+## Hospital exterior
+
+`hospital.glb`: **Hospital model** by **Er.B.Nijithkumar**, https://sketchfab.com/3d-models/hospital-model-0012226ea07d4161b4d2c133a9b11448 . License: **Creative Commons Attribution 4.0**, https://creativecommons.org/licenses/by/4.0/ . Official authenticated GLB 2K download retrieved 2026-10-12; 4,873,260 bytes; SHA-256 `dfd931413e481dea327d57bfcda54ee709f753178d533619384373bbd0729ead`.
+
+The packaged source includes embedded author/license metadata. Runtime modifications hide its original ground/road and foreign institution text, uniformly normalize the illustration, adapt glass roughness/reflections and add Chinese signs. Original animation is not played. No claim is made that it is the user's actual hospital BIM. Floor layouts and indicators are synthetic; the surrounding inpatient/medical-tech buildings are illustrative additions. Source attribution is visible in the dashboard footer.
 
 | Local file | Source asset | Original download | License |
 | --- | --- | --- | --- |

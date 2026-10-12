@@ -21,6 +21,8 @@ async function ready(page: Page) {
   await expect.poll(async () => (await snapshot(page)).frames, { timeout: initializationTimeout }).toBeGreaterThan(0);
   await expect.poll(async () => (await snapshot(page)).assetsReady, { timeout: initializationTimeout }).toBe(true);
   expect((await snapshot(page)).objects).toBeGreaterThan(1000);
+  await expect(page.locator('.model-state')).toContainText('医院模型已加载');
+  await expect(page.locator('.asset-credit')).toContainText('Er.B.Nijithkumar');
 }
 
 test('V1: real pointer rotation changes camera and rendered image', async ({ page }) => {
@@ -81,20 +83,20 @@ test('V3: automatic rotation starts and actually stops', async ({ page }) => {
 test('V4: select building, switch floor, select device and restore 3D pose', async ({ page }) => {
   await ready(page);
   await page.getByRole('button', { name: '选择B座' }).click();
-  await expect(page.locator('.building-name')).toContainText('B座 · 创新中心');
+  await expect(page.locator('.building-name')).toContainText('B座 · 住院楼');
   expect((await snapshot(page)).selected).toBe('B');
   const before = await snapshot(page);
   await page.getByRole('button', { name: '2.5D 楼层' }).click();
-  await page.getByLabel('选择楼层').selectOption('12');
-  await expect(page.getByRole('heading', { name: 'B座 · 12F 电子地图' })).toBeVisible();
+  await page.getByLabel('选择楼层').selectOption('3');
+  await expect(page.getByRole('heading', { name: 'B座 · 3F 电子地图' })).toBeVisible();
   await page.getByRole('button', { name: '选择设备 烟感探测器' }).click();
-  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('B-12F-SMK-03');
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('B-3F-SMK-03');
   await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('告警');
   await page.screenshot({ path: 'artifacts/harness/floor-device-desktop.png' });
   await page.getByRole('button', { name: '关闭设备详情' }).click();
-  await page.getByLabel('选择楼层').selectOption('20');
-  await expect(page.getByRole('heading', { name: 'B座 · 20F 电子地图' })).toBeVisible();
-  await page.getByRole('button', { name: '3D 园区' }).click();
+  await page.getByLabel('选择楼层').selectOption('6');
+  await expect(page.getByRole('heading', { name: 'B座 · 6F 电子地图' })).toBeVisible();
+  await page.getByRole('button', { name: '3D 院区' }).click();
   await expect.poll(async () => delta((await snapshot(page)).camera, before.camera)).toBeLessThan(.1);
 });
 
@@ -112,7 +114,7 @@ test('V5: layers toggle geometry and labels; auto preference persists across mod
   await expect(page.getByRole('button', { name: '选择设备 烟感探测器' })).toBeVisible();
   await page.getByLabel('周边建筑', { exact: true }).uncheck();
   expect((await snapshot(page)).surroundingsVisible).toBe(false);
-  await page.getByRole('button', { name: '3D 园区' }).click();
+  await page.getByRole('button', { name: '3D 院区' }).click();
   expect((await snapshot(page)).autoActive).toBe(true);
 });
 
@@ -127,12 +129,13 @@ test('D1: view navigation, alarm location and floor limits are linked', async ({
   await page.getByRole('button', { name: /烟感探测器异常/ }).click();
   await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('SMK-03');
   await page.getByRole('button', { name: '关闭设备详情' }).click();
-  await page.getByLabel('选择楼层').selectOption('32');
+  await page.getByLabel('选择楼宇').selectOption('B');
+  await page.getByLabel('选择楼层').selectOption('6');
   await page.getByLabel('选择楼宇').selectOption('C');
-  await expect(page.getByLabel('选择楼层')).toHaveValue('20');
-  await expect(page.getByRole('heading', { name: 'C座 · 20F 电子地图' })).toBeVisible();
+  await expect(page.getByLabel('选择楼层')).toHaveValue('4');
+  await expect(page.getByRole('heading', { name: 'C座 · 4F 电子地图' })).toBeVisible();
   await page.getByRole('button', { name: /空调温度超出阈值/ }).click();
-  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('A-12F-AC-01');
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('A-2F-AC-01');
 });
 
 for (const viewport of [{ width: 768, height: 1024 }, { width: 390, height: 844 }]) {
@@ -144,7 +147,7 @@ for (const viewport of [{ width: 768, height: 1024 }, { width: 390, height: 844 
     await page.getByRole('button', { name: '选择设备 空调机组' }).click();
     await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('AC-01');
     await page.getByRole('button', { name: '关闭设备详情' }).click();
-    await page.getByRole('button', { name: '3D 园区' }).click();
+    await page.getByRole('button', { name: '3D 院区' }).click();
     await page.screenshot({ path: `artifacts/harness/overview-${viewport.width}.png`, fullPage: true });
   });
 }
@@ -202,4 +205,39 @@ test('V8: delayed night asset finishing after scene reload leaves a usable singl
   const before = await snapshot(page);
   await page.getByRole('button', { name: '放大模型' }).click();
   await expect.poll(async () => (await snapshot(page)).distance).toBeLessThan(before.distance);
+});
+
+test('H1: delayed hospital model completing after reload leaves a usable single scene', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 120000 : 45000);
+  let requests = 0;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/assets/hospital.glb', async route => {
+    requests++; const response = await route.fetch(); await gate; await route.fulfill({ response });
+  });
+  await page.goto('/');
+  await expect(page.locator('.model-state')).toContainText('医院模型加载中');
+  await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().frames ?? 0), { timeout: initializationTimeout }).toBeGreaterThan(0);
+  await page.locator('.scene-host canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
+  await page.getByRole('button', { name: '重新加载' }).click();
+  release();
+  await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().assetsReady ?? false), { timeout: initializationTimeout }).toBe(true);
+  await expect(page.locator('.scene-host canvas')).toHaveCount(1);
+  await expect(page.locator('.model-state')).toContainText('医院模型已加载');
+  expect(requests).toBeGreaterThanOrEqual(2);
+  const before = await snapshot(page);
+  await page.getByRole('button', { name: '放大模型' }).click();
+  await expect.poll(async () => (await snapshot(page)).distance).toBeLessThan(before.distance);
+});
+
+test('H2: invalid hospital asset shows actionable failure and reload recovers', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 120000 : 45000);
+  await page.route('**/assets/hospital.glb', route => route.fulfill({ status: 200, contentType: 'model/gltf-binary', body: 'invalid model' }));
+  await page.goto('/');
+  await expect(page.getByRole('alert')).toContainText('医院模型加载失败');
+  await page.unroute('**/assets/hospital.glb');
+  await page.getByRole('button', { name: '重新加载' }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().assetsReady ?? false), { timeout: initializationTimeout }).toBe(true);
+  await expect(page.getByRole('alert')).toBeHidden();
+  await expect(page.locator('.scene-host canvas')).toHaveCount(1);
 });

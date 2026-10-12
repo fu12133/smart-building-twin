@@ -1,0 +1,5 @@
+- [x] Acquire and inspect the hospital model through an authorized official download; record license, author and modifications.
+- [x] Integrate optimized local hospital geometry with framing, selection, loading and resource cleanup in BuildingScene.
+- [x] Adapt dashboard/building/floor/equipment terminology to a Chinese hospital demonstration.
+- [x] Validate base paths, real pointer controls, delayed-load teardown, floor limits and responsive framing with screenshots.
+- [ ] Run strict specifications, build and relevant/full harness; publish, verify the actual public URL, record evidence and archive.

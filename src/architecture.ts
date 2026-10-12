@@ -180,7 +180,7 @@ export class Architecture {
     for (const x of [-w * .32, w * .32]) this.box(parent, .16, 4.4, .16, x, 2.2, d / 2 + 4.3, this.metal);
     for (let i = 0; i < 3; i++) this.box(parent, w * .8, .18, 1, 0, .12 + i * .18, d / 2 + 4.7 - i, this.stone);
   }
-  ground(parent: THREE.Group) {
+  ground(parent: THREE.Group, hospital = false) {
     const paving = new THREE.MeshStandardMaterial({ map: this.surface('paving'), color: 0xa0adb0, roughness: .95 });
     const asphalt = new THREE.MeshStandardMaterial({ map: this.surface('road'), color: 0x343638, roughness: .88 });
     this.box(parent, 1000, 1, 1000, 0, -1.2, -30, asphalt, false).receiveShadow = true;
@@ -192,7 +192,7 @@ export class Architecture {
     for (let z = -130; z < 100; z += 9) marks.push([64, -.65, z, .18, .035, 4]);
     for (let x = 31; x < 48; x += 2.2) marks.push([x, -.64, 46, 1.2, .04, 10]);
     this.batch(parent, marks, paint);
-    this.podium(parent);
+    if (!hospital) this.podium(parent);
     const lawn = new THREE.MeshStandardMaterial({ color: 0x3f5128, roughness: 1 });
     // Curved planted islands leave real pedestrian space between the podium and road.
     for (let i = 0; i < 7; i++) {

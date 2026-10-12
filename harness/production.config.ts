@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: '.',
   testMatch: 'production.spec.ts',
+  outputDir: '../test-results-production',
   timeout: 45000,
   workers: 1,
   reporter: [['list'], ['json', { outputFile: '../artifacts/harness/production-results.json' }]],
