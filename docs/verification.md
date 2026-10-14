@@ -183,3 +183,9 @@ BuildingScene切换时只替换楼层子树，立即清理旧几何/材质/灯�
 真实API的本地仓库子路径生产harness **1/1 passed（14.1秒，用例13.3秒）**：HDR/主体/周边HTTP200，天气API200、当前温度与UI匹配、数据时刻90分钟内，源/北京时间标识可见，无浏览器/HTTP错误；真实拖拽/全景/复位/不同楼层/设备/导航仍正常，生产没有开发诊断入口。`weather-live-local.png`显示实际模型数据2026/10/14 18:15、25.8°C，并不是验收fixture。
 
 已打开检查最终原生RTX5090/ANGLE D3D11的默认、近景、主体反向截图（`architecture-*.png`/`source-hospital-isolated.png`）及天气昼/夜/雨、白色楼层、768/390详情与真实API截图。主医院暖窗/基部洗墙/地面光斑可见；旋转后冷色环境反射与侧面变化保留源形体，周边按源位置遮挡时可用图层单独检视主体。没有声称材质/灯光为已核实现场方案，也没有FPS测量。公网部署及结果将在实际完成后补记。
+
+已发布运行源码`c293106d19da80ec72b0321cd19d2fd086846b3f`，成功[工作流38549493293](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38549493293)：严格规格5/5、Linux Chromium/SwiftShader **38/38（7.3分钟）**，构建7m59s、部署9s。公网HTML实际匹配`index-wUEeyjtw.js`/`index-CdW2Ckur.css`；来源清单64799三角形及主体/周边哈希与本地一致。
+
+真实公网生产harness **1/1 passed（最终17.6秒，用例16.9秒）**。实际天气API200、数据新鲜、温度25.7°C与UI对应，天气详情来源/数据时刻（2026/10/14 18:30）和北京时间可见；三项场景资产200，无浏览器/HTTP错误，实际拖拽/完整范围/复位、1F/2F差异/13F设备/导航正常且生产诊断入口未暴露。已打开检查`weather-live-online.png`/`source-context-online-default.png`/`source-context-online-full.png`。首次公网运行16.4秒通过，但默认截图采样早于软件渲染队列呈现复位视角；在生产测试中为硬姿态截图增加1秒呈现等待后复验，最终默认截图与主体视角一致。该等待只影响验收脚本，运行源码保持c293106。
+
+已归档`2026-10-14-hospital-display-lighting`及`2026-10-14-shenzhen-live-atmosphere`，基线合入灯光/玻璃、深圳天气及生命周期要求。首次归档后严格验证提示生命周期文本超过500字符，已在基线与归档中等义精简，并补全短proposal的Why；最终严格 **3/3 passed**。后续只保存归档、证据、文档和生产截图等待调整，已部署运行代码仍为c293106。4187预览保留，本任务4188已关闭。

@@ -49,10 +49,13 @@ test('production assets and model interactions work under repository URL', async
   const after = await canvas.screenshot();
   expect(createHash('sha256').update(after).digest('hex')).not.toBe(createHash('sha256').update(before).digest('hex'));
   await page.getByRole('button', { name: '复位视角' }).click();
+  // Production has no diagnostics: allow the bounded software render queue to present the exact pose.
+  await page.waitForTimeout(1000);
   mkdirSync('artifacts/harness', { recursive: true });
   await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/source-context-online-default.png' : 'artifacts/harness/source-context-production-default.png' });
   const sourceDefault = createHash('sha256').update(await canvas.screenshot()).digest('hex');
   await page.getByRole('button', { name: '查看完整白模', exact: true }).click();
+  await page.waitForTimeout(1000);
   const sourceFull = createHash('sha256').update(await canvas.screenshot()).digest('hex');
   expect(sourceFull, 'Full source view changes actual rendered geometry').not.toBe(sourceDefault);
   await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/source-context-online-full.png' : 'artifacts/harness/source-context-production-full.png' });

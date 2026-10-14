@@ -6,9 +6,9 @@
 1. 阅读规范、记录照明方案与场景 — complete
 2. 在既有BuildingScene和源材质增加照明，隔离楼层光照 — complete
 3. 规格/构建/harness、默认与反向实际截图检查 — complete
-4. 已授权GitHub Pages更新、公网验收、证据及归档 — in_progress
+4. 已授权GitHub Pages更新、公网验收、证据及归档 — complete
 5. 追加深圳天气/时间服务、外景联动与玻璃物理材质 — complete
-6. 对最终范围统一测试、截图、发布与归档 — in_progress
+6. 对最终范围统一测试、截图、发布与归档 — complete
 
 ## 目标
 恢复用户白模中遗漏的周边建筑和场地，保留源相对位置与统一比例，保持主体、楼层和旋转操作；通过OpenSpec/harness后更新已授权的公开GitHub Pages。

@@ -108,3 +108,13 @@ GitHub 远端树检查确认未上传 `node_modules`、`dist`、`test-results`�
 本地修改后执行规格校验、构建与适用 harness，再 `git push origin main`。官方 Actions 使用固定 SHA，通过检查后自动发布 Pages。CI 使用 Node 22 和 Chromium，本机 Windows harness 默认使用 Edge。仓库 base path 仅在生产构建时注入，本地开发仍在 4187 端口。
 
 站点是静态演示应用；访客无需安装开发环境。模型与 IoT 指标仍为明确标识的参数化演示内容。
+
+## 2026-10-14 医院照明、玻璃与深圳天气发布
+
+运行源码`c293106d19da80ec72b0321cd19d2fd086846b3f`已部署：[新版医院模型](https://guangfubill-crypto.github.io/smart-building-twin/?v=c293106)。成功工作流[38549493293](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38549493293)：规格5/5、Linux Chromium/SwiftShader38/38（7.3分钟），构建7m59s、部署9s。实际HTML为`index-wUEeyjtw.js`/`index-CdW2Ckur.css`，主体和原白模周边资产未改写。
+
+本地最终38/38（3.7分钟）；子路径生产1/1（14.1秒）；真实公网最终1/1（17.6秒）。公网真实天气API及HDR/主体/周边HTTP200，当前气温/数据时刻对应UI；真实指针、全景与复位、楼层/设备/导航和生产无诊断入口全部通过。证据及中间故障修正见verification.md；截图已检查。生产脚本硬姿态截图增加1秒呈现等待，单独记录为验收调整，不影响运行源码。
+
+访客右上角可查看/刷新深圳天气，“图层设置→天气效果”可切换昼夜/晴雨联动与静态展示灯光。玻璃物理反射/清漆与暖色洗墙/窗灯是展示方案；几何、比例、原28种楼层/演示数据标识保留。天气来源为Open-Meteo模型，每10分钟更新、失败/过期明示，当前免费服务用于非商业演示，商业服务许可边界见资产来源说明。
+
+两个OpenSpec变更已归档，最终基线严格3/3通过；后续证据/文档/测试截图呈现调整不改变运行代码c293106。

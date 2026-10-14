@@ -14,9 +14,9 @@ The exterior MUST adapt sky, reflection, illumination and fog to Shenzhen daylig
 ## MODIFIED Requirements
 
 ### Requirement: Rendering resource lifecycle
-Generated geometry, materials, textures and reflection render targets MUST be disposed when the scene is destroyed; rendering MUST retain responsive floor switching and graphics recovery.
+Scene-owned geometry, materials, textures and reflection targets MUST be disposed on destruction; floor switching and graphics recovery MUST stay usable.
 
-An idle scene without active precipitation MUST avoid continuous GPU redraws while camera motion, automatic rotation, viewport, atmosphere and layer changes MUST refresh the rendered view. Active precipitation MAY animate at a bounded rate and MUST stop in floor/full-context views or when weather effects are disabled.
+Idle scenes without active precipitation MUST avoid continuous GPU redraws. Camera motion, patrol, resize, atmosphere and layers MUST redraw. Precipitation MAY animate at a bounded rate and MUST stop in floor/full-context views or when weather effects are disabled.
 
 #### Scenario: Reinitialize after graphics failure
 - **WHEN** graphics recovery reloads the scene
