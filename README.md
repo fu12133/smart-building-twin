@@ -1,10 +1,10 @@
 # 云境 · 智慧医院数字孪生
 
-基于用户提供的项目白模 DWG，恢复塔楼、围合裙房、近邻建筑、周边城市与场地的源形体，保留真实旋转，并提供28个2.5D楼层方案示意。材质未按实景核准。React / TypeScript / Vite / Three.js / ECharts。
+基于用户提供的项目白模 DWG，恢复塔楼、围合裙房、近邻建筑、周边城市与场地，并提供可关闭的原创现代医院外观方案、真实旋转和28个2.5D楼层方案示意。新增造型、材质和室内尚未按实景核准。React / TypeScript / Vite / Three.js / ECharts。
 
 ## 在线使用
 
-[打开医院白模方案](https://guangfubill-crypto.github.io/smart-building-twin/)。访问者无需安装 Node.js，使用现代浏览器即可操作模型。
+[打开原创医院方案](https://guangfubill-crypto.github.io/smart-building-twin/)。访问者无需安装 Node.js，使用现代浏览器即可操作模型。
 
 源码仓库：[guangfubill-crypto/smart-building-twin](https://github.com/guangfubill-crypto/smart-building-twin)。
 
@@ -33,7 +33,8 @@ npm run dev
 | 点击设备标签或告警记录 | 打开设备详情 |
 | 右侧楼层条 | 切换楼层，与下拉选择同步 |
 | 楼层设备分类 / 全部系统 | 筛选点位或恢复全部设备 |
-| 图层设置 | 控制设备点位及周边建筑显示 |
+| 图层设置 | 控制原创医院方案、设备点位、周边建筑及天气效果 |
+| 原创医院方案 | 默认开启；关闭回看源形体与原材质方案，相机保持不变 |
 
 ## OpenSpec + harness
 
@@ -44,7 +45,7 @@ npm run harness
 ```
 
 - OpenSpec：`openspec/config.yaml`、`openspec/specs/` 和 `openspec/changes/archive/`。
-- Harness：`harness/building.spec.ts`。测试使用实际鼠标、滚轮、键盘和页面控件，不通过内部 setter 实现业务操作。
+- Harness：`harness/building.spec.ts`、`harness/hospital-design.spec.ts`及`harness/weather.spec.ts`。测试使用实际鼠标、滚轮、键盘和页面控件，不通过内部 setter 实现业务操作。
 - Windows harness 使用系统 Microsoft Edge；以 SwiftShader 运行 WebGL，降低机器 GPU 差异。需已安装 Edge。
 - GitHub Actions 的 Linux CI 使用 Playwright Chromium，工作流自动安装所需浏览器。
 - Dev-only `window.__BUILDING_HARNESS__()` 返回只读相机和场景快照。生产构建不开放该入口。
@@ -61,7 +62,9 @@ npm run harness
 
 资料给出地上 18 层＋地下 2 层、裙房约 6 层、改造面积 28,426 m²、投资 2.87 亿元；塔楼 13/14 层保留原有功能，地下只部分改造。按结构塔楼 69.5 米等比校准白模；包含屋顶构件的高度约 73.91 米、包围盒约 72.59×52.29 米，与资料 70×38 米存在差异，未强行拉伸。资料高度与层数不等于已验证的网格测绘或楼层语义。
 
-外加的幕墙杆件、入口/雨棚、到达区、程序地面和绿化已移除，外部形体以源白模为准。玻璃、石材、周边和场地材质仍为方案，不能代替实际照片。DWG单位头标米但结构高度205坐标单位，与资料69.5m冲突；目前沿用资料统一校准，不称已核准的现场一比一尺寸。医院名称尚未提供，未填写机构名称。地下形体与全部2.5D平面未经验证，楼层和设备数据为演示；没有实时BIM/IoT/临床数据连接。演示设备总数包含A/B分区1146台和公共区域100台。
+源形体视图不添加无源造型，城市/地面/场地沿用源网格。按用户新授权，默认原创医院方案在源体量上增加真实幕墙框、遮阳翼、层间带/灯带及玻璃门厅雨棚；关闭“原创医院方案”恢复原源形体和材质。这些构件和玻璃/石材/场地材质都是未核实设计，不能代替实际照片或竣工模型。DWG单位头标米但结构高度205坐标单位，与资料69.5m冲突；目前沿用资料统一校准，不称已核准的现场一比一尺寸。医院名称尚未提供，未填写机构名称。地下形体与全部2.5D平面未经验证，楼层和设备数据为演示；没有实时BIM/IoT/临床数据连接。演示设备总数包含A/B分区1146台和公共区域100台。
+
+原创构件和窗/面板/粗糙度纹理由项目生成，不依赖付费医院资产。详细方案见[docs/original-hospital-design.md](docs/original-hospital-design.md)。深圳天气来自Open-Meteo当前天气模型，页面可查看来源和数据时间；北京时间每秒更新。
 
 来源与许可见 [public/assets/CREDITS.md](public/assets/CREDITS.md)，校验与尺寸清单见 [public/assets/project-model.json](public/assets/project-model.json)。可用 LibreDWG 0.14 将原始 DWG 导出 JSON，再以 Python 标准库脚本复现派生网格：
 
@@ -84,7 +87,8 @@ A区1–18/B1/B2、B区1–6/B1/B2共28个楼层上下文各有独立的方案�
 - `src/floorLayouts.ts`：按分区/楼层解析唯一方案，包括楼板、核心筒、房间/门洞和设备位置；场景与界面共同使用。
 - `src/floorGeometry.ts`：将当前方案生成灰色楼板、白色隔墙/门洞与核心筒、楼梯的实体几何。
 - `src/deviceSystems.ts`：六类设备名称与图标；分类数量来自楼层示意点位。
-- `src/hospitalAsset.ts`：主体源GLB加载、方案玻璃/石材材质和资源清理，不添加外部造型。
+- `src/hospitalAsset.ts`：主体源GLB加载、源/原创方案切换和完整资源清理。
+- `src/hospitalDesign.ts`：沿源立面剪裁的原创三维构件、门厅、窗/面板纹理与物理材质。
 - `src/projectContextAsset.ts`：原周边/场地加载、共享源坐标、方案材质及失败/晚到资源清理。
 - `scripts/convert-white-model.py`：源网格转换、三角化和来源校验清单。
 - `src/architecture.ts`：环境反射/背景和纹理；旧程序场地、城市和景观生成器不再用于源白模场景。

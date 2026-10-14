@@ -6,5 +6,5 @@
 ## 2. 验证与交付
 - [x] 运行spec:validate、build和完整harness。
 - [x] 实际检查默认、近景、反向、日景及窄屏截图。
-- [ ] 更新既有GitHub Pages并验收公网。
-- [ ] 更新verification证据与项目知识，归档变更。
+- [x] 更新既有GitHub Pages并验收公网。
+- [x] 更新verification证据与项目知识，归档变更。

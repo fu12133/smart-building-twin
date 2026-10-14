@@ -49,15 +49,19 @@ The application MUST show an actionable error when WebGL creation fails or the r
 - **THEN** the UI displays a readable rendering failure with a reload action instead of an empty canvas
 
 ### Requirement: Detailed architectural rendering
-The hospital scene MUST render the supplied DWG hospital exterior and source surroundings/site with proposed reflective glazing and surface finishes, preserving source facade and rooftop geometry. All assets MUST remain genuine rotatable geometry and MUST distinguish source shape, proposed finishes and unverified dimensions/interiors without asserting a production BIM connection.
+The hospital scene MUST render the supplied DWG hospital and original surroundings/site as genuine rotatable geometry. The default original hospital proposal MUST add source-aligned three-dimensional curtain-wall frames, layered facade detailing and a proposed entrance with original materials. Source provenance and unverified proposal/dimension/interior boundaries MUST be visible.
 
 #### Scenario: Inspect the default architectural view
-- **WHEN** the user opens the 3D overview
-- **THEN** the DWG-derived tower/podium, original surrounding buildings and source site are visible with no unsupported architectural additions
+- **WHEN** a visitor opens, rotates and zooms the default overview
+- **THEN** original facade frames, shading details, differentiated glazing and entrance geometry remain visible on multiple sides with Chinese proposal identification
 
 #### Scenario: Inspect another side
-- **WHEN** the user rotates and zooms with pointer and wheel
-- **THEN** source side/rear geometry remains visible and camera reset and selection stay usable
+- **WHEN** a visitor rotates and zooms the exterior
+- **THEN** source side/rear geometry and original details remain three-dimensional, with usable reset and zone selection
+
+#### Scenario: Preserve lifecycle and floor navigation
+- **WHEN** a visitor disables the proposal, enters/returns from a floor, re-enables the proposal or reloads after graphics failure
+- **THEN** proposal preference and saved exterior pose are respected, one renderer remains usable, original assets stay unchanged, and static rendering settles without accumulated resources or errors
 
 ### Requirement: Rendering resource lifecycle
 Scene-owned geometry, materials, textures and reflection targets MUST be disposed on destruction; floor switching and graphics recovery MUST stay usable.
@@ -73,11 +77,11 @@ Idle scenes without active precipitation MUST avoid continuous GPU redraws. Came
 - **THEN** the idle rendered-frame count stays stable, zoom advances rendered frames, and hiding surroundings changes the rendered background
 
 ### Requirement: Architectural night light hierarchy
-The scene MUST present differentiated proposed hospital facade finishes, dimmer source surrounding buildings and legible source site divisions. Rotation MUST reveal source side/rear geometry; lighting and materials MUST NOT replace or invent architectural shape.
+The scene MUST differentiate hospital facade finishes from dimmer source context/site. The original proposal MAY include user-authorized architectural details and static facade/entrance light strips; the source view MUST retain original shape. Glazing MUST respond to actual view direction and neither view may use a screenshot substitute.
 
 #### Scenario: Default and reverse architectural views
-- **WHEN** the user opens the overview and rotates the scene
-- **THEN** the hospital remains distinct from source context, glazing responds to view direction and source buildings/site retain three-dimensional depth
+- **WHEN** a user rotates the original hospital or its source view
+- **THEN** the selected view keeps three-dimensional depth and view-dependent glazing, while source context/site geometry remains unchanged
 
 ### Requirement: Locally packaged scene assets
 Any third-party scene assets MUST be locally packaged with source/license documentation and respect the production repository base path. Late asset completion MUST not mutate a disposed scene.
@@ -153,11 +157,11 @@ The application MUST render the supplied white model's surrounding city, nearby 
 - **THEN** failure has a Chinese reload action, late resources are disposed without attaching to the old scene, and the current scene has one working renderer
 
 ### Requirement: Hospital source shape fidelity
-The hospital exterior MUST preserve the provided source tower/podium shape and MUST NOT add unsupported facade members, entrance structures or landscaping. Source shape fidelity MUST be distinguished from surveyed physical dimensions, actual material finishes and unverified interiors.
+The hospital MUST retain the supplied source tower/podium geometry and shared source calibration. The original white-model view MUST show no added architectural shapes. A separately identified original hospital design view MAY add user-authorized facade and entrance details without replacing source massing, surrounding geometry or site. Physical dimensions, proposed finishes/details and schematic interiors MUST remain distinguished.
 
 #### Scenario: Compare the hospital with its source
-- **WHEN** a user opens and rotates the hospital exterior
-- **THEN** the supplied source geometry remains intact without extra architectural shapes, while proposed materials and the project-based uniform calibration are clearly identified
+- **WHEN** a visitor toggles the original hospital proposal through scene layers
+- **THEN** real architectural detail and proposed finishes appear/disappear, source geometry stays intact, and camera position and original surroundings/site do not change
 
 ### Requirement: Hospital display illumination
 The exterior MUST provide static warm hospital surface/window lighting and cooler side/back fill with restrained bloom using the existing rendering lifecycle. Illumination MUST retain unchanged source assets/geometry/coordinates, remain identified as a display proposal and preserve the existing floor-view lighting and idle redraw behavior.
