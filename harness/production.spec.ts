@@ -15,7 +15,8 @@ test('production assets and model interactions work under repository URL', async
   await expect(page.getByRole('heading', { name: '智慧医院综合管理平台' })).toBeVisible();
   const canvas = page.locator('.scene-host canvas');
   await expect(canvas).toBeVisible();
-  await expect(page.locator('.model-state')).toContainText('医院模型已加载');
+  // Cold public asset download/graphics initialization is separate from UI interaction latency.
+  await expect(page.locator('.model-state')).toContainText('医院模型已加载', { timeout: 30000 });
   await expect(page.locator('.context-state')).toContainText('白模周边已加载', { timeout: 30000 });
   await expect(page.getByRole('button', { name: '选择A区' })).toBeVisible();
   expect(await page.evaluate(() => typeof (window as any).__BUILDING_HARNESS__)).toBe('undefined');

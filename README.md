@@ -87,7 +87,7 @@ A区1–18/B1/B2、B区1–6/B1/B2共28个楼层上下文各有独立的方案�
 - `src/hospitalAsset.ts`：主体源GLB加载、方案玻璃/石材材质和资源清理，不添加外部造型。
 - `src/projectContextAsset.ts`：原周边/场地加载、共享源坐标、方案材质及失败/晚到资源清理。
 - `scripts/convert-white-model.py`：源网格转换、三角化和来源校验清单。
-- `src/architecture.ts`：程序纹理、反射环境、医疗到达区和示意景观。
+- `src/architecture.ts`：环境反射/背景和纹理；旧程序场地、城市和景观生成器不再用于源白模场景。
 - `src/main.tsx`：导航、面板、楼栋/楼层/设备状态、错误处理。
 - `src/Chart.tsx`：图表生命周期、趋势及能耗占比。
 - `src/data.ts`：项目分区、楼层改造范围与演示设备定义。

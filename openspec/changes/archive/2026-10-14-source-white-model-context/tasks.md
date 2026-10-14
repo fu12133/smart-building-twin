@@ -6,4 +6,4 @@
 ## Verification and delivery
 - [x] Add source/context, full-view and delayed/failing-loading harness scenarios.
 - [x] Run strict specs/build/full harness and inspect actual rendered screenshots.
-- [ ] Publish, verify public behavior, record evidence and archive.
+- [x] Publish, verify public behavior, record evidence and archive.
