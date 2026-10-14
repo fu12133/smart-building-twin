@@ -12,12 +12,13 @@ import { buildings } from './data';
 import { getFloorLayout } from './floorLayouts';
 import { Architecture } from './architecture';
 import { HospitalAsset } from './hospitalAsset';
+import { ProjectContextAsset } from './projectContextAsset';
 import { createFloorGeometry } from './floorGeometry';
 import { deviceSystems, DeviceFilter } from './deviceSystems';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
-type Options = { onSelect: (id: string) => void; onDevice: (id: string) => void; onError: (error: string) => void; onModelLoaded: () => void };
+type Options = { onSelect: (id: string) => void; onDevice: (id: string) => void; onError: (error: string) => void; onModelLoaded: () => void; onContextLoaded: () => void };
 export class BuildingScene {
   readonly renderer: THREE.WebGLRenderer;
   readonly camera = new THREE.PerspectiveCamera(40, 1, 0.1, 1200);
@@ -52,6 +53,9 @@ export class BuildingScene {
   private floorKey = '';
   private architecture: Architecture;
   private hospital!: HospitalAsset;
+  private context!: ProjectContextAsset;
+  private contextView = false;
+  private lastPickSourceHandle: number | null = null;
   private environmentTarget: THREE.WebGLRenderTarget;
   private composer: EffectComposer;
   private floorAO: SSAOPass;
@@ -76,7 +80,7 @@ export class BuildingScene {
     this.renderer.shadowMap.needsUpdate = true;
     this.architecture = new Architecture(this.renderer, () => {
       this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
-    });
+    }, false);
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.environmentTarget = pmrem.fromEquirectangular(this.architecture.environment());
     this.scene.environment = this.environmentTarget.texture;
@@ -173,8 +177,6 @@ export class BuildingScene {
     line.position.set(x, y, z); parent.add(line);
   }
   private createCity() {
-    this.architecture.ground(this.city, true);
-    this.architecture.hospitalForecourt(this.city);
     for (const b of buildings) {
       const tower = new THREE.Group(); tower.position.set(b.x, 0, b.z); tower.userData.building = b.id;
       this.city.add(tower); this.towers.set(b.id, tower);
@@ -189,23 +191,15 @@ export class BuildingScene {
       this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
       this.options.onModelLoaded();
     }, () => this.options.onError('医院模型加载失败，请检查网络后重新加载场景。'));
-    this.hospitalSign(this.city, '门急诊入口（方案）', -17, 3.8, 5.1, 10);
-    this.architecture.context(this.surroundings);
+    this.context = new ProjectContextAsset(import.meta.env.BASE_URL + 'assets/project-context.glb', () => {
+      this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
+      this.options.onContextLoaded();
+    }, () => this.options.onError('白模周边加载失败，请检查网络后重新加载场景。'));
+    this.surroundings.add(this.context.buildings); this.city.add(this.context.ground);
     for (let i = 0; i < 6; i++) {
       const p = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .3, 16), new THREE.MeshBasicMaterial({ color: i === 2 ? 0xffaa64 : 0x40e5d4 }));
       p.position.set(-33 + i * 15, .5, 36); this.markers.add(p);
     }
-  }
-  private hospitalSign(parent: THREE.Group, text: string, x: number, y: number, z: number, width: number) {
-    const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 128;
-    const context = canvas.getContext('2d')!;
-    context.fillStyle = '#f0f4ee'; context.fillRect(0, 0, 1024, 128);
-    context.fillStyle = '#216a68'; context.font = 'bold 70px "Microsoft YaHei", sans-serif';
-    context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, 512, 64);
-    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
-    this.architecture.textures.push(texture);
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, width / 8), new THREE.MeshStandardMaterial({ map: texture, roughness: .6, emissive: '#8aafa6', emissiveIntensity: .12, side: THREE.DoubleSide }));
-    mesh.position.set(x, y, z); parent.add(mesh);
   }
   private addLabel(text: string, position: THREE.Vector3, floorOnly: boolean, action: () => void, className: string) {
     const element = document.createElement('button'); element.textContent = text; element.className = className;
@@ -258,9 +252,11 @@ export class BuildingScene {
       this.controls.minDistance = 35; this.controls.maxDistance = 220;
     } else {
       this.camera.position.copy(this.savedPosition); this.controls.target.copy(this.savedTarget);
-      this.controls.minDistance = 55; this.controls.maxDistance = 520;
+      this.controls.minDistance = 55; this.controls.maxDistance = this.contextView ? 6000 : 520;
     }
     this.mode = mode; this.city.visible = mode === '3d'; this.floorMap.visible = mode === 'floor';
+    this.camera.far = mode === '3d' && this.contextView ? 10000 : 1200; this.camera.updateProjectionMatrix();
+    if (this.scene.fog instanceof THREE.FogExp2) this.scene.fog.density = mode === '3d' && this.contextView ? .00012 : .0028;
     this.floorAO.enabled = mode === 'floor';
     this.scene.background = mode === 'floor' ? this.floorBackground : this.exteriorBackground;
     this.renderDirty = true;
@@ -309,6 +305,11 @@ export class BuildingScene {
   reset() {
     this.renderDirty = true;
     this.clearMomentum();
+    if (this.mode === '3d') {
+      this.contextView = false; this.controls.maxDistance = 520;
+      this.camera.far = 1200; this.camera.updateProjectionMatrix();
+      if (this.scene.fog instanceof THREE.FogExp2) this.scene.fog.density = .0028;
+    }
     const auto = this.controls.autoRotate; this.controls.autoRotate = false;
     this.controls.enableDamping = false;
     const fit = Math.max(1, Math.min(1.85, 1.05 / this.camera.aspect));
@@ -316,6 +317,20 @@ export class BuildingScene {
     this.camera.position.set(...(this.mode === '3d' ? [-105 * fit, 80 * fit, 138 * fit] : [x, 50 * floorFit, 44 * floorFit + 3]) as [number, number, number]);
     this.controls.target.set(this.mode === '3d' ? 0 : x, this.mode === '3d' ? 27 : 0, this.mode === '3d' ? 0 : 3); this.controls.update();
     this.controls.enableDamping = true; this.controls.autoRotate = auto;
+  }
+  showContext() {
+    if (this.mode !== '3d' || !this.context.ready) return;
+    this.clearMomentum(); this.contextView = true;
+    this.controls.maxDistance = 6000; this.camera.far = 10000; this.camera.updateProjectionMatrix();
+    if (this.scene.fog instanceof THREE.FogExp2) this.scene.fog.density = .00012;
+    const sphere = this.context.bounds.getBoundingSphere(new THREE.Sphere());
+    const margin = innerWidth > 1050 ? (innerWidth <= 1240 ? 493 : 646) : 22;
+    const aspect = Math.max(100, this.host.clientWidth - margin) / this.host.clientHeight;
+    const angle = Math.min(THREE.MathUtils.degToRad(this.camera.fov / 2), Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * aspect));
+    const distance = Math.min(5900, sphere.radius / Math.sin(angle) * 1.08);
+    this.controls.target.copy(sphere.center);
+    this.camera.position.copy(sphere.center).add(new THREE.Vector3(-.43, .74, .52).normalize().multiplyScalar(distance));
+    this.controls.update(); this.renderDirty = true;
   }
   zoom(factor: number) {
     const offset = this.camera.position.clone().sub(this.controls.target);
@@ -336,10 +351,11 @@ export class BuildingScene {
     if (e.button !== 0 || this.pointerDown.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) > 5) return;
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.raycaster.setFromCamera(new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1), this.camera);
-    const hit = this.raycaster.intersectObjects(this.mode === '3d' ? [this.hospital.root] : this.floorMap.children, true).find(candidate => {
+    const hit = this.raycaster.intersectObjects(this.mode === '3d' ? [this.hospital.root, this.context.buildings] : this.floorMap.children, true).find(candidate => {
       for (let object: THREE.Object3D | null = candidate.object; object; object = object.parent) if (!object.visible) return false;
       return true;
     });
+    this.lastPickSourceHandle = hit?.object.userData.sourceHandle ?? null;
     if (!hit) return;
     let obj: THREE.Object3D | null = hit.object;
     while (obj) { if (obj.userData.building) { this.options.onSelect(obj.userData.building); break; } if (obj.userData.device) { this.options.onDevice(obj.userData.device); break; } obj = obj.parent; }
@@ -388,10 +404,11 @@ export class BuildingScene {
     }
     this.frameId = requestAnimationFrame(this.animate);
   };
-  snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && !this.renderDirty }; }
+  snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && this.context.ready && !this.renderDirty }; }
   dispose() {
     this.destroyed = true; cancelAnimationFrame(this.frameId); this.observer.disconnect(); this.controls.dispose(); this.disposables.forEach(fn => fn());
     this.clearFloor();
+    this.context.buildings.removeFromParent(); this.context.ground.removeFromParent(); this.context.dispose();
     this.hospital.root.removeFromParent(); this.hospital.dispose();
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
     this.scene.traverse(obj => {

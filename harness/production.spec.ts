@@ -8,7 +8,7 @@ test('production assets and model interactions work under repository URL', async
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('response', r => { if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`); });
-  const assets = ['night-city.hdr', 'leaves-color.jpg', 'leaves-alpha.png', 'project-hospital.glb'];
+  const assets = ['night-city.hdr', 'project-context.glb', 'project-hospital.glb'];
   const assetResponses = Promise.all(assets.map(name => page.waitForResponse(r => r.url() === new URL('assets/' + name, baseURL!).href)));
   await page.goto(baseURL!);
   for (const response of await assetResponses) expect(response.status(), response.url()).toBe(200);
@@ -16,6 +16,7 @@ test('production assets and model interactions work under repository URL', async
   const canvas = page.locator('.scene-host canvas');
   await expect(canvas).toBeVisible();
   await expect(page.locator('.model-state')).toContainText('医院模型已加载');
+  await expect(page.locator('.context-state')).toContainText('白模周边已加载', { timeout: 30000 });
   await expect(page.getByRole('button', { name: '选择A区' })).toBeVisible();
   expect(await page.evaluate(() => typeof (window as any).__BUILDING_HARNESS__)).toBe('undefined');
   const rect = (await canvas.boundingBox())!;
@@ -26,6 +27,14 @@ test('production assets and model interactions work under repository URL', async
   await page.mouse.up();
   const after = await canvas.screenshot();
   expect(createHash('sha256').update(after).digest('hex')).not.toBe(createHash('sha256').update(before).digest('hex'));
+  await page.getByRole('button', { name: '复位视角' }).click();
+  mkdirSync('artifacts/harness', { recursive: true });
+  await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/source-context-online-default.png' : 'artifacts/harness/source-context-production-default.png' });
+  const sourceDefault = createHash('sha256').update(await canvas.screenshot()).digest('hex');
+  await page.getByRole('button', { name: '查看完整白模', exact: true }).click();
+  const sourceFull = createHash('sha256').update(await canvas.screenshot()).digest('hex');
+  expect(sourceFull, 'Full source view changes actual rendered geometry').not.toBe(sourceDefault);
+  await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/source-context-online-full.png' : 'artifacts/harness/source-context-production-full.png' });
   await page.getByRole('button', { name: '复位视角' }).click();
   await page.getByRole('button', { name: '2.5D 楼层' }).click();
   await page.getByRole('button', { name: '选择设备 空调机组' }).click();

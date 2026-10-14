@@ -18,9 +18,10 @@ export class Architecture {
   get assetsReady() { return this.assetsPending === 0; }
   private foliage: THREE.MeshStandardMaterial;
 
-  constructor(private renderer: THREE.WebGLRenderer, invalidate: () => void) {
+  constructor(private renderer: THREE.WebGLRenderer, invalidate: () => void, loadVegetation = true) {
     this.stone = new THREE.MeshStandardMaterial({ color: 0xffefd0, map: this.surface('stone'), roughness: .65, metalness: .04, emissive: 0xd3a65c, emissiveIntensity: .16 });
     this.foliage = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .92, side: THREE.DoubleSide, alphaTest: .42 });
+    if (!loadVegetation) { this.assetsPending = 0; return; }
     const loader = new THREE.TextureLoader();
     const load = (name: string, color: boolean) => {
       const texture = loader.load(import.meta.env.BASE_URL + 'assets/' + name, t => {

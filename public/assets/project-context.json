@@ -1,0 +1,439 @@
+{
+  "sourceName": "项目白模.dwg",
+  "sourceSha256": "bdab765f1b3c4a486557809395292e1295641687490bcb85f8bc509a6055e564",
+  "decodedSha256": "df3bf3e5ad2b0698cd38ad364ffaf96084e93b0e5292df4cd9b0b324bb414494",
+  "decoder": "LibreDWG 0.14",
+  "uniformScale": 0.33902439024390246,
+  "coordinateTransform": [
+    "x",
+    "z",
+    "-y"
+  ],
+  "anchorOffset": [
+    -9.828893150043427e-05,
+    4.661801548146342e-06,
+    -0.00015131322349049015
+  ],
+  "sourceHandles": [
+    249,
+    250,
+    251,
+    252,
+    253,
+    254,
+    255,
+    256,
+    257,
+    258,
+    259,
+    260,
+    263,
+    575,
+    392,
+    393,
+    394,
+    395,
+    562,
+    580
+  ],
+  "objects": [
+    {
+      "handle": 249,
+      "role": "site-panel",
+      "triangles": 44,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -467.8784894245427,
+          0.0032849195526875857,
+          26.599271374213988
+        ],
+        "max": [
+          324.3426931985995,
+          0.0033832084841861464,
+          317.90843074147296
+        ]
+      }
+    },
+    {
+      "handle": 250,
+      "role": "site-panel",
+      "triangles": 6,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          84.52404773991283,
+          0.0033211312642894637,
+          -90.68391336580602
+        ],
+        "max": [
+          355.0058808117378,
+          0.0034194201957880245,
+          208.2045538181212
+        ]
+      }
+    },
+    {
+      "handle": 251,
+      "role": "site-panel",
+      "triangles": 24,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -45.93811009104659,
+          0.0033676891792119757,
+          -92.74073858493712
+        ],
+        "max": [
+          265.93684424423594,
+          0.0034245932974483416,
+          87.4197689893769
+        ]
+      }
+    },
+    {
+      "handle": 252,
+      "role": "site-panel",
+      "triangles": 18,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          6.654580976904894,
+          0.0033469967725808783,
+          -374.602500357279
+        ],
+        "max": [
+          474.71857136051835,
+          0.0035073629239727316,
+          125.73399464677021
+        ]
+      }
+    },
+    {
+      "handle": 253,
+      "role": "site-panel",
+      "triangles": 24,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -382.8498314834223,
+          0.0032487078410823175,
+          -535.6471143769055
+        ],
+        "max": [
+          508.60884324980947,
+          0.003559093940548781,
+          438.6467404249238
+        ]
+      }
+    },
+    {
+      "handle": 254,
+      "role": "site-panel",
+      "triangles": 6,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -474.0581525104802,
+          0.0033314774676067075,
+          -431.59402331840704
+        ],
+        "max": [
+          -171.88667982147962,
+          0.0035280553306004394,
+          180.15305830792684
+        ]
+      }
+    },
+    {
+      "handle": 255,
+      "role": "site-panel",
+      "triangles": 28,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -410.932158679497,
+          0.00331078506097561,
+          106.47507517744856
+        ],
+        "max": [
+          175.55884741806403,
+          0.0033521698742378053,
+          228.6853185141959
+        ]
+      }
+    },
+    {
+      "handle": 256,
+      "role": "site-panel",
+      "triangles": 16,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -62.248454731266676,
+          0.0032900926543445123,
+          -471.87137897770583
+        ],
+        "max": [
+          348.72110030011436,
+          0.003538401533917683,
+          292.7706537014101
+        ]
+      }
+    },
+    {
+      "handle": 257,
+      "role": "site-panel",
+      "triangles": 6,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -170.56873905833174,
+          0.0033728622808689027,
+          -636.674727277058
+        ],
+        "max": [
+          639.028447146532,
+          0.003636690465416244,
+          184.98829435022867
+        ]
+      }
+    },
+    {
+      "handle": 258,
+      "role": "site-panel",
+      "triangles": 70,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -49.128206690346325,
+          0.0032797464510272685,
+          -467.98948349371193
+        ],
+        "max": [
+          353.20005448504196,
+          0.003538401533917683,
+          315.8094757824409
+        ]
+      }
+    },
+    {
+      "handle": 259,
+      "role": "site-panel",
+      "triangles": 4,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -501.1270483993903,
+          0.003398727789156927,
+          -604.3406071360519
+        ],
+        "max": [
+          251.66835386694933,
+          0.003626344262099,
+          100.68427414312596
+        ]
+      }
+    },
+    {
+      "handle": 260,
+      "role": "site-panel",
+      "triangles": 14,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 3,
+      "bounds": {
+        "min": [
+          20.849282232144986,
+          0.0033728622808689027,
+          -279.9440929878049
+        ],
+        "max": [
+          372.94901152820125,
+          0.0034763243140243905,
+          57.701862242163685
+        ]
+      }
+    },
+    {
+      "handle": 263,
+      "role": "city",
+      "triangles": 46519,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 52,
+      "bounds": {
+        "min": [
+          -657.8377620045732,
+          -5.2133655506268295e-05,
+          -648.2464176829269
+        ],
+        "max": [
+          670.0903981278583,
+          90.85851589295923,
+          614.8560329530297
+        ]
+      }
+    },
+    {
+      "handle": 575,
+      "role": "nearby",
+      "triangles": 1464,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -32.495779567811546,
+          -5.281666757331708e-05,
+          -122.21875826207604
+        ],
+        "max": [
+          153.3006981082079,
+          83.1306831545946,
+          59.715916256788304
+        ]
+      }
+    },
+    {
+      "handle": 392,
+      "role": "land",
+      "triangles": 7290,
+      "skippedDegenerateOrMalformedFaces": 1,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -670.6528177400916,
+          -2.9565704998536585e-05,
+          -657.7770504835175
+        ],
+        "max": [
+          664.4554419540777,
+          0.1695564695974666,
+          661.591157643388
+        ]
+      }
+    },
+    {
+      "handle": 393,
+      "role": "west-site",
+      "triangles": 1004,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -174.53740814953318,
+          0.16950709274629125,
+          -96.94099709115378
+        ],
+        "max": [
+          -52.6069468428449,
+          0.3390286338038551,
+          109.512534239234
+        ]
+      }
+    },
+    {
+      "handle": 394,
+      "role": "east-site",
+      "triangles": 378,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -33.69044531845465,
+          0.16950908317798366,
+          10.618846465320123
+        ],
+        "max": [
+          101.27163845155297,
+          0.2373166245658237,
+          71.05143905267484
+        ]
+      }
+    },
+    {
+      "handle": 395,
+      "role": "base",
+      "triangles": 80,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -685.2123261242378,
+          -0.00011109869463024391,
+          -671.1583746189025
+        ],
+        "max": [
+          666.540533000667,
+          0.0001103618931127805,
+          688.1569797422828
+        ]
+      }
+    },
+    {
+      "handle": 562,
+      "role": "local-site",
+      "triangles": 7620,
+      "skippedDegenerateOrMalformedFaces": 3,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -45.90880964325696,
+          -1.1865932063358577,
+          -32.928144817817504
+        ],
+        "max": [
+          45.083436100657394,
+          1.1526796451429047,
+          43.55239976092083
+        ]
+      }
+    },
+    {
+      "handle": 580,
+      "role": "site-edge",
+      "triangles": 184,
+      "skippedDegenerateOrMalformedFaces": 0,
+      "duplicateFacesRemoved": 0,
+      "bounds": {
+        "min": [
+          -45.90880964325696,
+          0.16949419030329244,
+          -32.928144817817504
+        ],
+        "max": [
+          45.08342575445408,
+          1.6223485353516371,
+          43.55239976092083
+        ]
+      }
+    }
+  ],
+  "bounds": {
+    "min": [
+      -685.2124244131694,
+      -1.1865885445343096,
+      -671.1585259321259
+    ],
+    "max": [
+      670.0902998389267,
+      90.85852055476079,
+      688.1568284290594
+    ]
+  },
+  "triangles": 64799,
+  "glbSha256": "fe974da4f73cea0c2c31efdf386373ce3dc7b6631cd595ed5f69c09f805d5468",
+  "recoveredComplexFaces": 2,
+  "selfIntersectionSplits": 1,
+  "primaryGlbSha256": "c71ab31043f9c092247c3547537ab76ad91b2ebe70028129e261e4aa09db1e36",
+  "note": "城市、近邻建筑及场地形体来自同一项目白模，保留原相对坐标与统一比例；材质和医疗到达细节为方案。未导入重叠主体分解件及远处编辑副本。"
+}

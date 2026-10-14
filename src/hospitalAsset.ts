@@ -43,7 +43,6 @@ export class HospitalAsset {
       const center = original.getCenter(new THREE.Vector3());
       this.root.position.set(-center.x, -original.min.y, -center.z);
       this.root.add(model);
-      this.addFacadeMembers();
       model.traverse(object => {
         if (object instanceof THREE.Mesh) { object.castShadow = true; object.receiveShadow = true; }
       });
@@ -52,33 +51,6 @@ export class HospitalAsset {
     }, undefined, () => {
       if (!this.disposed) { this.failed = true; this.onError(); }
     });
-  }
-
-  private addFacadeMembers() {
-    // Proposed mullions follow the four source tower corners, never a replacement box.
-    const k = 69.5 / 205;
-    const corners = [[41.23, -37.572], [76.514, -77.111], [103.554, -52.887], [68.458, -12.909]].map(([x, y]) => new THREE.Vector3(x * k, 0, -y * k));
-    const poses: THREE.Matrix4[] = [], pose = new THREE.Object3D();
-    for (let side = 0; side < 4; side++) {
-      const a = corners[side], b = corners[(side + 1) % 4], direction = b.clone().sub(a);
-      const width = direction.length(), angle = -Math.atan2(direction.z, direction.x), columns = Math.round(width / 1.45);
-      const center = corners.reduce((sum, corner) => sum.add(corner), new THREE.Vector3()).multiplyScalar(.25);
-      const outward = new THREE.Vector3(direction.z, 0, -direction.x).normalize();
-      if (outward.dot(a.clone().lerp(b, .5).sub(center)) < 0) outward.negate();
-      outward.multiplyScalar(.2); // Keep proposed members clear of the source glazing depth.
-      for (let col = 0; col <= columns; col++) {
-        pose.position.copy(a).lerp(b, col / columns).add(outward); pose.position.y = 37.8;
-        pose.rotation.set(0, angle, 0); pose.scale.set(.075, 63.4, .13); pose.updateMatrix(); poses.push(pose.matrix.clone());
-      }
-      for (let floor = 2; floor <= 18; floor++) {
-        pose.position.copy(a).lerp(b, .5).add(outward); pose.position.y = floor * 69.5 / 18;
-        pose.rotation.set(0, angle, 0); pose.scale.set(width, .06, .14); pose.updateMatrix(); poses.push(pose.matrix.clone());
-      }
-    }
-    const metal = new THREE.MeshStandardMaterial({ color: '#d7e5e8', metalness: .4, roughness: .28, emissive: '#b5d6e1', emissiveIntensity: .6 });
-    const members = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), metal, poses.length);
-    poses.forEach((matrix, index) => members.setMatrixAt(index, matrix)); members.userData.building = 'A'; members.name = '方案幕墙分格';
-    this.root.add(members);
   }
 
   private static facadeTextures() {

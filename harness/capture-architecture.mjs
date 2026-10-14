@@ -13,6 +13,7 @@ try {
   const canvas = page.locator('.scene-host canvas');
   await canvas.waitFor();
   await page.locator('.model-state').filter({ hasText: '医院模型已加载' }).waitFor();
+  if (await page.locator('.context-state').count()) await page.locator('.context-state').filter({ hasText: '白模周边已加载' }).waitFor();
   await page.waitForTimeout(2500);
   const gpu = await canvas.evaluate(element => {
     const gl = element.getContext('webgl2');
@@ -28,6 +29,12 @@ try {
   await page.mouse.move(rect.x + rect.width * .83, rect.y + rect.height * .6, { steps: 24 });
   await page.mouse.up(); await page.waitForTimeout(1500);
   await page.screenshot({ path: 'artifacts/harness/architecture-reverse.png', clip: await canvas.boundingBox() });
+  if (await page.locator('.context-state').count()) {
+    await page.getByRole('button', { name: '图层设置' }).click();
+    await page.getByLabel('周边建筑', { exact: true }).uncheck();
+    await page.getByRole('button', { name: '图层设置' }).click();
+    await page.screenshot({ path: 'artifacts/harness/source-hospital-isolated.png', clip: await canvas.boundingBox() });
+  }
   if (errors.length) throw new Error(errors.join('\n'));
   console.log('Architectural overview, zoom and reverse-angle screenshots captured; no browser errors. GPU: ' + gpu);
 } finally { await browser.close(); }

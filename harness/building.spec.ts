@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 
-type Snapshot = { camera: number[]; target: number[]; distance: number; frames: number; objects: number; gpuGeometries: number; mode: string; auto: boolean; autoActive: boolean; selected: string; floor: number; devicesVisible: boolean; surroundingsVisible: boolean; assetsReady: boolean };
+type Snapshot = { camera: number[]; target: number[]; distance: number; frames: number; objects: number; gpuGeometries: number; mode: string; auto: boolean; autoActive: boolean; selected: string; floor: number; devicesVisible: boolean; surroundingsVisible: boolean; contextReady: boolean; contextView: boolean; lastPickSourceHandle: number | null; assetsReady: boolean };
 const snapshot = (page: Page): Promise<Snapshot> => page.evaluate(() => (window as any).__BUILDING_HARNESS__());
 const delta = (a: number[], b: number[]) => Math.sqrt(a.reduce((v, n, i) => v + (n - b[i]) ** 2, 0));
 const errors = new Map<Page, string[]>();
@@ -435,4 +435,113 @@ test('F5: changed floor updates equipment rooms while preserving inspected camer
   await expect(detail).toContainText('A-2F-AC-01');
   await expect(detail).toContainText('核心筒西侧设备间');
   await expect(page.locator('.device-pin:visible')).toHaveCount(6);
+});
+
+test('C1: source surroundings and site retain shared coordinates, provenance and primary shape', async ({ page }) => {
+  const primary = await (await page.request.get('/assets/project-model.json')).json();
+  const context = await (await page.request.get('/assets/project-context.json')).json();
+  const binary = await (await page.request.get('/assets/project-context.glb')).body();
+  expect(context.sourceSha256).toBe(primary.sourceSha256);
+  expect(context.primaryGlbSha256).toBe('c71ab31043f9c092247c3547537ab76ad91b2ebe70028129e261e4aa09db1e36');
+  expect(context.uniformScale).toBe(primary.uniformScale);
+  expect(context.coordinateTransform).toEqual(['x', 'z', '-y']);
+  expect(context.sourceHandles.sort((a: number, b: number) => a-b)).toEqual([...Array.from({ length: 12 }, (_, index) => 249+index), 263, 392, 393, 394, 395, 562, 575, 580]);
+  expect(context.bounds.max[0]-context.bounds.min[0]).toBeGreaterThan(1300);
+  expect(context.bounds.max[2]-context.bounds.min[2]).toBeGreaterThan(1300);
+  expect(context.recoveredComplexFaces).toBe(2);
+  expect(context.selfIntersectionSplits).toBe(1);
+  expect(createHash('sha256').update(binary).digest('hex')).toBe(context.glbSha256);
+  const gltf = JSON.parse(binary.subarray(20, 20+binary.readUInt32LE(12)).toString());
+  expect(gltf.scenes[0].extras.sourceAnchor).toEqual(context.anchorOffset);
+  expect(gltf.nodes.every((node: any) => context.sourceHandles.includes(node.extras.sourceHandle) && !node.extras.building)).toBe(true);
+  expect(gltf.nodes.some((node: any) => node.extras.contextRole === 'nearby')).toBe(true);
+  expect(gltf.nodes.some((node: any) => node.extras.contextRole === 'local-site')).toBe(true);
+  expect(context.triangles).toBeGreaterThan(60000);
+});
+
+test('C2: full source view, context layers and floor roundtrip preserve real scene behavior', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 150000 : 60000);
+  await ready(page);
+  await expect(page.locator('.context-state')).toContainText('白模周边已加载');
+  const original = await snapshot(page);
+  await page.screenshot({ path: 'artifacts/harness/source-context-default.png' });
+  await page.getByRole('button', { name: '查看完整白模', exact: true }).click();
+  await expect.poll(async () => (await snapshot(page)).contextView).toBe(true);
+  await expect.poll(async () => (await snapshot(page)).distance).toBeGreaterThan(1500);
+  const fullView = await snapshot(page);
+  await page.screenshot({ path: 'artifacts/harness/source-context-full.png' });
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  await page.getByRole('button', { name: '3D 院区' }).click();
+  await expect.poll(async () => delta((await snapshot(page)).camera, fullView.camera)).toBeLessThan(.01);
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('周边建筑', { exact: true }).uncheck();
+  await expect.poll(async () => (await snapshot(page)).objects).toBeLessThan(fullView.objects-20000);
+  await page.screenshot({ path: 'artifacts/harness/source-context-site.png' });
+  await page.getByLabel('周边建筑', { exact: true }).check();
+  await expect.poll(async () => (await snapshot(page)).objects).toBeGreaterThan(fullView.objects-100);
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByRole('button', { name: '复位视角' }).click();
+  await expect.poll(async () => delta((await snapshot(page)).camera, original.camera)).toBeLessThan(.01);
+  expect((await snapshot(page)).contextView).toBe(false);
+});
+
+test('C3: delayed context completing after reload cannot attach to a disposed scene', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 120000 : 45000);
+  let requests = 0, release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/assets/project-context.glb', async route => {
+    requests++; const response = await route.fetch(); await gate; await route.fulfill({ response });
+  });
+  await page.goto('/');
+  await expect(page.locator('.context-state')).toContainText('白模周边加载中');
+  await expect(page.getByRole('button', { name: '查看完整白模' })).toBeDisabled();
+  await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().frames ?? 0), { timeout: initializationTimeout }).toBeGreaterThan(0);
+  await page.locator('.scene-host canvas').evaluate(canvas => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
+  await page.getByRole('button', { name: '重新加载' }).click(); release();
+  await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().assetsReady ?? false), { timeout: initializationTimeout }).toBe(true);
+  expect(requests).toBeGreaterThanOrEqual(2);
+  await expect(page.locator('.scene-host canvas')).toHaveCount(1);
+  await expect(page.locator('.context-state')).toContainText('白模周边已加载');
+  await page.getByRole('button', { name: '查看完整白模' }).click();
+  await expect.poll(async () => (await snapshot(page)).distance).toBeGreaterThan(1500);
+});
+
+test('C4: invalid context reports a Chinese failure and reload recovers', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 120000 : 45000);
+  await page.route('**/assets/project-context.glb', route => route.fulfill({ status: 200, contentType: 'model/gltf-binary', body: 'invalid context model' }));
+  await page.goto('/');
+  await expect(page.getByRole('alert')).toContainText('白模周边加载失败');
+  await page.unroute('**/assets/project-context.glb');
+  await page.getByRole('button', { name: '重新加载' }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__BUILDING_HARNESS__?.().assetsReady ?? false), { timeout: initializationTimeout }).toBe(true);
+  await expect(page.getByRole('alert')).toBeHidden();
+  await expect(page.locator('.scene-host canvas')).toHaveCount(1);
+});
+
+for (const width of [768, 390]) test(`C5: full white model remains usable at ${width}`, async ({ page }) => {
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 1024 });
+  await ready(page);
+  await page.getByRole('button', { name: '查看完整白模' }).click();
+  await expect.poll(async () => (await snapshot(page)).contextView).toBe(true);
+  await page.locator('.scene-section').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `artifacts/harness/source-context-${width}.png`, fullPage: true });
+  await page.getByRole('button', { name: '复位视角' }).click();
+  expect((await snapshot(page)).contextView).toBe(false);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('C6: source context clicks never select hospital zones behind surrounding geometry', async ({ page }) => {
+  await ready(page);
+  await page.getByRole('button', { name: '选择B区' }).click();
+  const canvas = page.locator('.scene-host canvas'), rect = (await canvas.boundingBox())!;
+  // Visually inspected source-context-default.png: central nearby facade, no UI overlay.
+  const point = { x: 690-rect.x, y: 420-rect.y };
+  await canvas.click({ position: point });
+  expect([263, 575]).toContain((await snapshot(page)).lastPickSourceHandle);
+  await expect(page.locator('.building-name')).toContainText('B区 · 裙房');
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('周边建筑', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await canvas.click({ position: point });
+  expect([263, 575]).not.toContain((await snapshot(page)).lastPickSourceHandle);
 });
