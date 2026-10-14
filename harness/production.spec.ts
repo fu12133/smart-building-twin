@@ -38,6 +38,18 @@ test('production assets and model interactions work under repository URL', async
   await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/weather-live-online.png' : 'artifacts/harness/weather-live-local.png' });
   await expect(page.getByLabel('北京时间')).toBeVisible();
   await page.getByRole('button', { name: '关闭天气详情' }).click();
+  await expect(page.locator('.scene-info')).toContainText('原创现代医院');
+  const proposalImage = createHash('sha256').update(await canvas.screenshot()).digest('hex');
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('原创医院方案', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await expect(page.locator('.scene-info')).toContainText('源白模形体');
+  await page.waitForTimeout(750);
+  expect(createHash('sha256').update(await canvas.screenshot()).digest('hex')).not.toBe(proposalImage);
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('原创医院方案', { exact: true }).check();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await expect(page.locator('.scene-info')).toContainText('原创现代医院');
   await expect(page.getByRole('button', { name: '选择A区' })).toBeVisible();
   expect(await page.evaluate(() => typeof (window as any).__BUILDING_HARNESS__)).toBe('undefined');
   const rect = (await canvas.boundingBox())!;

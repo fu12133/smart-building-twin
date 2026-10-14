@@ -10,7 +10,7 @@ The scene now includes proposed static lighting and physically based coated glaz
 
 Run `scripts/convert-white-model.py` with the local decoded JSON and original DWG to reproduce the **271,584-byte / 2,783-triangle** GLB. `project-model.json` records the source hash, output hash, handles, source unit header, uniform scale and actual converted bounds. CAD Z becomes WebGL Y; uniform scale **69.5/205** calibrates the structural tower. Roof equipment extends to about **73.91 m**; footprint is about **72.59×52.29 m**, which differs from the supplied **70×38 m** summary. The source shape is retained without anisotropic stretching. Podium height in the UI is explicitly the supplied project-summary value, not a verified model measurement. The 18+2 floor counts come from the summary, not a verified source floor partition.
 
-Unsupported procedural facade members, medical entrance/forecourt, ground, city blocks and landscaping have been removed. Hospital glazing/stone and surrounding/site finishes remain proposals, not verified actual materials. No institution name or confirmed departmental allocation is invented. A/B identify connected tower/podium zones within one building. Underground choices do not assert imported basement geometry. Operational data and all electronic floor maps are synthetic; no real BIM/IoT/clinical connection is claimed.
+The source view removes unsupported procedural facade/entrance shapes. The user-authorized optional original hospital proposal adds separately identified architectural details as described below; it never replaces source ground, city blocks or landscaping. Hospital glazing/stone and surrounding/site finishes remain proposals, not verified actual materials. No institution name or confirmed departmental allocation is invented. A/B identify connected tower/podium zones within one building. Underground choices do not assert imported basement geometry. Operational data and all electronic floor maps are synthetic; no real BIM/IoT/clinical connection is claimed.
 
 ## Original surroundings and site (restored 2026-10-14)
 
@@ -33,3 +33,7 @@ The previous packaged source included embedded author/license metadata. Previous
 | night-city.hdr | [Poly Haven dresden_station_night](https://polyhaven.com/a/dresden_station_night), 1K HDR | https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/dresden_station_night_1k.hdr | CC0 |
 
 Poly Haven license reference: https://docs.polyhaven.com/en/faq . Files retrieved 2026-10-12 from the asset download links provided by the official API. No high-poly tree model is included. The leaf atlases are retained as historical asset credits but are no longer loaded/rendered after restoring source site geometry. The HDR remains lighting only. All runtime asset paths use the configured Vite base, including GitHub Pages repository URLs.
+
+## 原创医院方案（2026-10-14）
+
+`src/hospitalDesign.ts`根据用户提供白模立面生成可关闭的原创幕墙框、遮阳翼、层间带、静态灯带和门厅雨棚。窗内层次、玻璃粗糙度和珠白面板纹理均由本项目生成，不使用图库付费模型、商家渲染图或第三方医院资产。新增构件是用户授权的外观设计，不是竣工或实测几何；原始主体/周边GLB及共享校准保持不变。图层设置关闭“原创医院方案”可回看既有源形体与材质方案；内部布局仍为未核实示意。

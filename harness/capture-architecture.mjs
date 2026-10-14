@@ -36,5 +36,10 @@ try {
     await page.screenshot({ path: 'artifacts/harness/source-hospital-isolated.png', clip: await canvas.boundingBox() });
   }
   if (errors.length) throw new Error(errors.join('\n'));
+  const proposal = await page.evaluate(() => {
+    const diagnostic = window.__BUILDING_HARNESS__?.();
+    return diagnostic ? { proposalDetails: diagnostic.proposalDetails, originalProposal: diagnostic.originalProposal } : undefined;
+  });
+  if (proposal) console.log('Read-only proposal evidence: ' + JSON.stringify(proposal));
   console.log('Architectural overview, zoom and reverse-angle screenshots captured; no browser errors. GPU: ' + gpu);
 } finally { await browser.close(); }

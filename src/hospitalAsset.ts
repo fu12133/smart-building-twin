@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { HospitalDesign } from './hospitalDesign';
 
 /** User-supplied DWG geometry with proposed facade finishes; floor layouts remain illustrative. */
 export class HospitalAsset {
@@ -9,6 +10,9 @@ export class HospitalAsset {
   failed = false;
   private disposed = false;
   private day = 0;
+  private design?: HospitalDesign;
+  private originalProposal = true;
+  get proposalDetails() { return this.design?.detailCount ?? 0; }
 
   constructor(url: string, private onLoad: () => void, private onError: () => void) {
     new GLTFLoader().load(url, asset => {
@@ -59,14 +63,17 @@ export class HospitalAsset {
         }
       });
       glazing.forEach((_glass, original) => original.dispose());
+      model.traverse(object => {
+        if (object instanceof THREE.Mesh) { object.castShadow = true; object.receiveShadow = true; }
+      });
+      this.design = new HospitalDesign(model);
+      this.design.setEnabled(this.originalProposal);
       // The conversion already calibrates source geometry uniformly; never normalize it again.
       const center = original.getCenter(new THREE.Vector3());
       this.root.position.set(-center.x, -original.min.y, -center.z);
       this.root.add(model);
-      model.traverse(object => {
-        if (object instanceof THREE.Mesh) { object.castShadow = true; object.receiveShadow = true; }
-      });
-      this.root.updateMatrixWorld(true); this.bounds.copy(HospitalAsset.visibleBounds(this.root));
+      // Display-detail instances must not change the source-bound lighting/calibration anchor.
+      this.root.updateMatrixWorld(true); this.bounds.copy(original).translate(this.root.position);
       this.ready = true; this.setDaylight(this.day); this.onLoad();
     }, undefined, () => {
       if (!this.disposed) { this.failed = true; this.onError(); }
@@ -110,6 +117,7 @@ export class HospitalAsset {
 
   setDaylight(day: number) {
     this.day = day;
+    this.design?.setDaylight(day);
     this.root.traverse(object => {
       if (!(object instanceof THREE.Mesh)) return;
       for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
@@ -122,8 +130,11 @@ export class HospitalAsset {
 
   dispose() {
     this.disposed = true; this.ready = false;
+    this.design?.dispose();
     HospitalAsset.release(this.root); this.root.clear();
   }
+
+  setProposal(enabled: boolean) { this.originalProposal = enabled; this.design?.setEnabled(enabled); this.setDaylight(this.day); }
 
   private static visibleBounds(root: THREE.Object3D) {
     const bounds = new THREE.Box3();

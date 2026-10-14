@@ -1,5 +1,37 @@
 # 白模周边恢复发现
 
+## 2026-10-14 原创现代医院方案
+- 用户最新明确授权自行制作现代医院。原源视图仍保留无外加形体的约束，默认可关闭的原创方案可增加真实细节，AGENTS已对应记录该边界。
+- 从源玻璃三角形分组到立面，剪裁竖向/横向网格并合并区间，真实实例化窗框、白色层间带/遮阳翼、暖色灯带；裙房可容纳的原墙段定位原创玻璃门厅雨棚及通用医疗符号，没有命名医院或替换源周边/场地。
+- 原创1024×2048窗贴图含20个不同楼层行、暖窗内部层次及粗糙度，1024²珠白面板贴图；全部本项目生成，无第三方医院素材。源原始材质与原创材质分开持有，切换不变动相机，dispose先恢复源材质引用再销毁完整资源。
+- 新测试初次3/4：源/原创往返GPU几何36→194来自首次渲染楼层资源，不能断言与未进楼层时相同；改为首次往返后连续三次往返无增长，随后专项4/4（28.1秒）通过。没有忽略运行错误或改掉资源稳定目标。
+- 检查原生RTX5090近景/反向/主体独显：幕墙真实细部、窗口、门厅可见，源中庭未被长方体封闭。构建/规格已通过；完整42项仍在运行，尚未发布或声称达到照片级质量。
+
+## 2026-10-14 免费开放医院模型
+- 使用agent-reach Jina读取作者原页，Exa先前已知未配置，内置搜索检索官方页面，Sketchfab公开v3/search及v3/models核对实时数据。
+- Hospital by iagoArt3D，f91637b01dde4749aafd56ea37fa3b21：184赞、8414三角形、isDownloadable=true，CC BY 4.0，作者描述现代医院外景，适合网页轻量样板；未验证纹理分辨率及写实程度。
+- Paimio Sanatorium by Lassi Kaukonen，edadc72f28e84eceb7e0df6dc04fee9c：280赞、953807三角形、可下载、CC BY 4.0，历史疗养院摄影测量模型，场地/年代不同，需优化，原页NoAI，作为普通3D资产候选不用于生成AI。
+- Hospital Room by Uğur Yakışık，39d5f1555a26402ab1a54ffbaa8afec1：1151赞、25105三角形、可下载、CC BY 4.0，Blender/Substance Painter，原页列baked-textures/gameready；病房素材并非整栋医院。
+- Medical X-ray Image Viewer by re1monsen，1caaa90f0e6b48d08109e517ddd8aab0：868赞、12512三角形、可下载、CC BY 4.0、作者声明4K纹理。Fab同款免费/5.0分但仅1评价，不能将该评分当成充分口碑。
+- Madduck Free Modular 3D hospital environment：作者页5.0/5（12评价），25个模型及PBR贴图，Blender包205MB/FBX无贴图1.4MB。免费可商用但禁止资产独立再分发，属于免费自定义许可而非开放素材；不直接放入公开仓库。
+- CC0完整医院备选Dream Hospital（BlendSwap18246）只有5赞、144KB且低多边形；OpenGameArt Moscow医疗站（Mixazzz）CC0、2收藏、5.9MB，偏旧式建筑。两者不包装成高写实高分资源。
+- 排除NC许可高点赞手术室、恐怖废弃医院及明确从The Evil Within/GTA游戏提取的资源。neutralize医院117赞/6498554三角形，描述不足且极重，不列优先推荐。
+- CC BY 4.0官方许可允许商用修改和再分发，需署名、许可链接及改动说明：https://creativecommons.org/licenses/by/4.0/ 。计数为2026-10-14实时API，搜索缓存值可能较旧。下载状态已核对，未实际下载/优化或视觉验收。
+
+## 2026-10-14 高质量医院模型调研
+- CGTrader Modern Hospital Complex（3dmi，ID7283543）119美元，644005 polygons，19张8K PNG，FBX28.4MB/Blender Eevee18.9MB；PNG包857MB。商品图背景/场景不包含，网页需要压缩纹理、材质转换和性能实测。
+- Fab Poly Works Hospital Building（a178e0c0-206c-4a28-b4a1-f2942a363014）7648三角形、2K PBR，GLB/glTF可用，但标签包含Cartoon/Lowpoly；当前页面未显示可核对价格，不作为高写实优先推荐。
+- Sketchfab Modern Hospital Building（00872d5c8c134e69af6bfcca4c8e36bc）官方API isDownloadable=false、license空，不当作免费可下载素材。
+- CGTrader官方Royalty Free FAQ要求资产作为产品组成部分并防止独立提取，明确建议与作者确认用途；当前公开GitHub/Pages不能直接把付费原始模型或可单独提取的GLB公开上传，需另行确认合适授权。
+- 商家预览图官方URL已取得；IAB创建图片页两次超时，尚未实际视觉检视、下载或转换候选。未声称网页达到商家V-Ray预览效果；8K/面数只是参数，不等同于审美质量。
+- 官方链接：https://www.cgtrader.com/3d-models/exterior/cityscape/modern-hospital-building-a0ec14e9-2a67-438a-9957-24382a9d4a88 ；https://www.cgtrader.com/3d-models/science/medical/modern-hospital-complex ；https://www.turbosquid.com/3d-models/modern-hospital-building-exterior-2536554 ；https://help.cgtrader.com/hc/en-us/articles/360015124437-Royalty-Free-License 。价格为2026-10-14页面标价，美元，不含后续优化/税费。
+- 客户对当前效果不满意；当前源主体2783三角形，属于白模派生形体，素材精细度与美术制作需要单独评估。
+- Exa mcporter未配置（Unknown MCP server exa），使用内置搜索并按agent-reach Jina读取原商品页，未用转载站断言价格/授权。
+- CGTrader Modern Hospital Building（3dmi，ID7283710）当前99美元，PBR/15张8K PNG，306567 polygons；FBX13.4MB、Blender Eevee8.81MB，素材本身与工程场地背景需分开核对。网页结果未实测。
+- TurboSquid JUN Studio Modern Hospital Building Exterior ID2536554当前149美元，170万多边形、3dsMax2025/V-Ray7、植被使用V-Ray Proxy，属于重离线渲染场景，需减面/材质转换；不可承诺网页同等效果。
+- CGTrader低价Exterior Hospital design标AI辅助/Corona9，MAX2.1GB、FBX115MB、贴图742MB、UV未确认，不作为优先实时网页候选。
+- 用户原有一比一要求仍存在：图库通用模型只能作展示/质量参考，保留项目形体的交付更适合甲方精细建筑源模型或按白模做精模；需核对公开网页/仓库的授权，不能仅据Royalty Free字样断言可公开分发资产。
+
 ## 2026-10-14 追加照明
 - 用户最新范围只加灯光；源模型和医院/周边/场地几何保持不变。
 - 原场景全局光较均匀，HDR反射和窗纹理已有；外景照明可沿用既有Bloom/阴影/按需渲染，楼层模式须保留原参数。

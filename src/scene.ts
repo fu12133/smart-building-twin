@@ -74,6 +74,7 @@ export class BuildingScene {
   private atmosphere: SceneAtmosphere;
   private hospitalLights = new THREE.Group();
   private weatherEnabled = true;
+  private originalProposal = true;
 
   constructor(private host: HTMLDivElement, private options: Options) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -363,6 +364,10 @@ export class BuildingScene {
     this.renderer.shadowMap.needsUpdate = true;
     this.updateDeviceVisibility();
   }
+  setProposal(enabled: boolean) {
+    this.originalProposal = enabled; this.hospital.setProposal(enabled);
+    this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
+  }
   setDeviceFilter(filter: DeviceFilter) { this.deviceFilter = filter; this.updateDeviceVisibility(); }
   private updateDeviceVisibility() {
     this.renderDirty = true;
@@ -485,7 +490,7 @@ export class BuildingScene {
     }
     this.frameId = requestAnimationFrame(this.animate);
   };
-  snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && this.context.ready && !this.renderDirty }; }
+  snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), originalProposal: this.originalProposal, proposalDetails: this.hospital.proposalDetails, mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && this.context.ready && !this.renderDirty }; }
   dispose() {
     this.destroyed = true; cancelAnimationFrame(this.frameId); this.observer.disconnect(); this.controls.dispose(); this.disposables.forEach(fn => fn());
     this.clearFloor();
