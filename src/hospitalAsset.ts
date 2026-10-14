@@ -8,30 +8,12 @@ export class HospitalAsset {
   ready = false;
   failed = false;
   private disposed = false;
+  private day = 0;
 
   constructor(url: string, private onLoad: () => void, private onError: () => void) {
     new GLTFLoader().load(url, asset => {
       if (this.disposed) { HospitalAsset.release(asset.scene); return; }
       const model = asset.scene;
-      const finishes = HospitalAsset.facadeTextures();
-      model.traverse(object => {
-        if (object instanceof THREE.Mesh) {
-          for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-            if (material instanceof THREE.MeshStandardMaterial) {
-              if (material.name === 'project-glass') {
-                material.color.set('#ffffff'); material.map = finishes.color;
-                material.emissiveMap = finishes.light; material.emissive.set('#ffffff'); material.emissiveIntensity = .7;
-                material.roughness = .19; material.metalness = .28; material.envMapIntensity = 3.2;
-              } else if (material.name === 'project-metal') {
-                material.color.set('#e5e8dd'); material.metalness = .55; material.roughness = .28;
-                material.emissive.set('#aebccc'); material.emissiveIntensity = .15;
-              } else {
-                material.color.set('#c7c9b9'); material.roughness = .7; material.metalness = .05;
-              }
-            }
-          }
-        }
-      });
       model.updateMatrixWorld(true);
       const original = HospitalAsset.visibleBounds(model);
       const size = original.getSize(new THREE.Vector3());
@@ -39,6 +21,44 @@ export class HospitalAsset {
       if (!Number.isFinite(span) || span <= 0) {
         HospitalAsset.release(model); this.failed = true; this.onError(); return;
       }
+      const finishes = HospitalAsset.facadeTextures();
+      const glazing = new Map<THREE.MeshStandardMaterial, THREE.MeshPhysicalMaterial>();
+      model.traverse(object => {
+        if (object instanceof THREE.Mesh) {
+          const materials = (Array.isArray(object.material) ? object.material : [object.material]).map(original => {
+            let material = original;
+            if (original instanceof THREE.MeshStandardMaterial && original.name === 'project-glass') {
+              let glass = glazing.get(original);
+              if (!glass) {
+                glass = new THREE.MeshPhysicalMaterial();
+                const physicalDefines = glass.defines;
+                THREE.MeshStandardMaterial.prototype.copy.call(glass, original);
+                // StandardMaterial.copy resets defines; retain the physical IOR/specular shader path.
+                glass.defines = physicalDefines;
+                glass.ior = 1.5; glass.clearcoat = 1; glass.clearcoatRoughness = .045;
+                glass.normalMap = finishes.normal; glass.normalScale.set(.13, .13);
+                glazing.set(original, glass);
+              }
+              material = glass;
+            }
+            if (material instanceof THREE.MeshStandardMaterial) {
+              if (material.name === 'project-glass') {
+                material.color.set('#ffffff'); material.map = finishes.color;
+                material.emissiveMap = finishes.light; material.emissive.set('#ffffff'); material.emissiveIntensity = 1.85;
+                material.roughness = .1; material.metalness = .06; material.envMapIntensity = 10.5;
+              } else if (material.name === 'project-metal') {
+                material.color.set('#e5e8dd'); material.metalness = .55; material.roughness = .28;
+                material.emissive.set('#ffe0aa'); material.emissiveIntensity = 1.1;
+              } else {
+                material.color.set('#c7c9b9'); material.roughness = .7; material.metalness = .05;
+              }
+            }
+            return material;
+          });
+          object.material = Array.isArray(object.material) ? materials : materials[0];
+        }
+      });
+      glazing.forEach((_glass, original) => original.dispose());
       // The conversion already calibrates source geometry uniformly; never normalize it again.
       const center = original.getCenter(new THREE.Vector3());
       this.root.position.set(-center.x, -original.min.y, -center.z);
@@ -47,7 +67,7 @@ export class HospitalAsset {
         if (object instanceof THREE.Mesh) { object.castShadow = true; object.receiveShadow = true; }
       });
       this.root.updateMatrixWorld(true); this.bounds.copy(HospitalAsset.visibleBounds(this.root));
-      this.ready = true; this.onLoad();
+      this.ready = true; this.setDaylight(this.day); this.onLoad();
     }, undefined, () => {
       if (!this.disposed) { this.failed = true; this.onError(); }
     });
@@ -67,7 +87,7 @@ export class HospitalAsset {
       c.fillStyle = '#122c3d'; c.fillRect(x + 4, y + 222, 120, 29);
       c.fillStyle = '#b6c3c8'; c.fillRect(x, y + 252, 128, 2);
       if (occupied) {
-        e.fillStyle = '#b39762'; e.fillRect(x + 12, y + 30, 105, 188);
+        e.fillStyle = '#e6bd82'; e.fillRect(x + 12, y + 30, 105, 188);
         for (let j = 0; j < 6; j++) { e.fillStyle = 'rgba(35,35,32,.42)'; e.fillRect(x + 16 + j * 18, y + 30, 3, 188); }
       }
     }
@@ -75,7 +95,29 @@ export class HospitalAsset {
       const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace;
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
     };
-    return { color: texture(color), light: texture(light) };
+    const normal = document.createElement('canvas'); normal.width = normal.height = 128;
+    const n = normal.getContext('2d')!, pixels = n.createImageData(128, 128);
+    for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+      const i = (y * 128 + x) * 4;
+      pixels.data[i] = 128 + Math.round(Math.sin(x / 19 + y / 31) * 3);
+      pixels.data[i + 1] = 128 + Math.round(Math.cos(x / 27 - y / 23) * 3);
+      pixels.data[i + 2] = 255; pixels.data[i + 3] = 255;
+    }
+    n.putImageData(pixels, 0, 0);
+    const normalTexture = texture(normal); normalTexture.colorSpace = THREE.NoColorSpace;
+    return { color: texture(color), light: texture(light), normal: normalTexture };
+  }
+
+  setDaylight(day: number) {
+    this.day = day;
+    this.root.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        if (!(material instanceof THREE.MeshStandardMaterial)) continue;
+        if (material.name === 'project-glass') material.emissiveIntensity = THREE.MathUtils.lerp(1.85, .1, day);
+        if (material.name === 'project-metal') material.emissiveIntensity = THREE.MathUtils.lerp(1.1, .04, day);
+      }
+    });
   }
 
   dispose() {

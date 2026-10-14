@@ -1,0 +1,162 @@
+import { test, expect, Page } from '@playwright/test';
+import { createHash } from 'node:crypto';
+import { NIGHT_TIME, WEATHER_ROUTE, weatherFixture } from './weather-fixture';
+
+test.use({ timezoneId: 'America/New_York' });
+const errors = new Map<Page, string[]>();
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(NIGHT_TIME);
+  await page.route(WEATHER_ROUTE, route => route.fulfill({ json: weatherFixture() }));
+  const messages: string[] = []; errors.set(page, messages);
+  page.on('pageerror', error => messages.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') messages.push(message.text()); });
+});
+test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
+const snapshot = (page: Page) => page.evaluate(() => (window as any).__BUILDING_HARNESS__());
+const capture = async (page: Page) => {
+  await expect.poll(async () => (await snapshot(page)).assetsReady).toBe(true);
+  return createHash('sha256').update(await page.locator('.scene-host canvas').screenshot({ style: '.scene-section > :not(.scene-host), .scene-labels, .left-panels, .right-panels { visibility: hidden !important; }' })).digest('hex');
+};
+async function ready(page: Page) {
+  await page.goto('/');
+  await expect(page.locator('.model-state')).toContainText('医院模型已加载', { timeout: process.env.CI ? 45000 : 15000 });
+  await expect(page.locator('.context-state')).toContainText('白模周边已加载', { timeout: process.env.CI ? 45000 : 15000 });
+  await expect.poll(async () => (await snapshot(page)).assetsReady, { timeout: process.env.CI ? 45000 : 15000 }).toBe(true);
+}
+test('G1: Shenzhen current weather, ticking Shanghai clock and day/night reflections', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 180000 : 60000);
+  const noon = new Date('2026-10-14T04:00:00Z');
+  await page.clock.setSystemTime(noon);
+  let night = false;
+  await page.route(WEATHER_ROUTE, route => {
+    const url = new URL(route.request().url());
+    expect(url.searchParams.get('latitude')).toBe('22.54554');
+    expect(url.searchParams.get('longitude')).toBe('114.0683');
+    expect(url.searchParams.get('timezone')).toBe('Asia/Shanghai');
+    return route.fulfill({ json: weatherFixture({ time: night ? NIGHT_TIME : noon }) });
+  });
+  await ready(page);
+  await expect(page.getByRole('button', { name: '深圳天气', exact: true })).toContainText('26.5°C');
+  await expect(page.locator('.clock strong')).toHaveText(/^12:/);
+  const clock = await page.locator('.clock strong').innerText();
+  await expect.poll(() => page.locator('.clock strong').innerText()).not.toBe(clock);
+  await page.getByRole('button', { name: '深圳天气', exact: true }).click();
+  const details = page.getByRole('dialog', { name: '深圳天气详情' });
+  await expect(details).toContainText('数据时刻：2026/10/14 12:00（北京时间）');
+  await expect(details).toContainText('非现场实测');
+  await page.getByRole('button', { name: '关闭天气详情' }).click();
+  await page.screenshot({ path: 'artifacts/harness/weather-day.png' });
+  const day = await capture(page), pose = await snapshot(page);
+  night = true; await page.clock.setFixedTime(NIGHT_TIME);
+  await page.getByRole('button', { name: '深圳天气', exact: true }).click();
+  await page.getByRole('button', { name: '刷新天气' }).click();
+  await expect(details).toContainText('20:00（北京时间）');
+  await page.getByRole('button', { name: '关闭天气详情' }).click();
+  await expect(page.getByLabel('外景天气效果')).toContainText('夜景');
+  expect(await capture(page)).not.toBe(day);
+  expect((await snapshot(page)).camera).toEqual(pose.camera);
+  await page.screenshot({ path: 'artifacts/harness/weather-night.png' });
+});
+test('G2: rain effects render, stop when disabled and leave floor lighting unchanged', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 180000 : 60000);
+  await page.route(WEATHER_ROUTE, route => route.fulfill({ json: weatherFixture({ code: 63, cloud: 100, precipitation: 2.1 }) }));
+  await ready(page);
+  await expect(page.getByLabel('外景天气效果')).toContainText('中雨');
+  const pose = await snapshot(page);
+  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(pose.frames);
+  await page.screenshot({ path: 'artifacts/harness/weather-rain.png' });
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('天气效果', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await expect(page.getByLabel('外景天气效果')).toContainText('展示灯光');
+  await page.waitForTimeout(300); const paused = await snapshot(page);
+  await page.waitForTimeout(400); expect((await snapshot(page)).frames).toBe(paused.frames);
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  const floorWithoutRain = await capture(page), floorState = await snapshot(page);
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('天气效果', { exact: true }).check();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  expect(await capture(page)).toBe(floorWithoutRain);
+  await page.waitForTimeout(300); expect((await snapshot(page)).frames).toBe(floorState.frames);
+  await page.screenshot({ path: 'artifacts/harness/weather-floor.png' });
+  await page.getByRole('button', { name: '3D 院区' }).click();
+  expect(Math.hypot(...(await snapshot(page)).camera.map((value: number, i: number) => value - pose.camera[i]))).toBeLessThan(.01);
+  const before = await snapshot(page);
+  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(before.frames);
+  await page.getByRole('button', { name: '查看完整白模', exact: true }).click();
+  await page.waitForTimeout(500); const full = await snapshot(page);
+  await page.waitForTimeout(300); expect((await snapshot(page)).frames).toBe(full.frames);
+});
+test('G3: invalid data never fabricates weather; manual retry and old-reading fallback', async ({ page }) => {
+  let request = 0;
+  await page.route(WEATHER_ROUTE, route => route.fulfill({ json: ++request === 2 ? weatherFixture() : { current: { temperature_2m: 999 } } }));
+  await ready(page);
+  await expect(page.getByRole('button', { name: '深圳天气', exact: true })).toContainText('--°C');
+  await page.getByRole('button', { name: '深圳天气', exact: true }).click();
+  const details = page.getByRole('dialog', { name: '深圳天气详情' });
+  await expect(details).toContainText('天气更新失败');
+  await page.getByRole('button', { name: '刷新天气' }).click();
+  await expect(details).toContainText('26.5°C');
+  await expect(details).toContainText('已更新');
+  await page.getByRole('button', { name: '刷新天气' }).click();
+  await expect(details).toContainText('保留上次数据');
+  await expect(details).toContainText('26.5°C');
+  await page.getByRole('button', { name: '关闭天气详情' }).click();
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  await page.getByRole('button', { name: '选择设备 空调机组' }).click();
+  await expect(page.getByRole('dialog', { name: '设备详情' })).toContainText('AC-01');
+});
+test('G4: stale rainy data is identified and cannot start precipitation rendering', async ({ page }) => {
+  await page.route(WEATHER_ROUTE, route => route.fulfill({ json: weatherFixture({ time: new Date(NIGHT_TIME.getTime() - 2 * 3600000), code: 65, precipitation: 5, cloud: 100 }) }));
+  await ready(page);
+  await expect(page.getByRole('button', { name: '深圳天气', exact: true })).toContainText('数据过期');
+  await expect(page.getByLabel('外景天气效果')).toContainText('天气待更新');
+  const idle = await snapshot(page); await page.waitForTimeout(400);
+  expect((await snapshot(page)).frames).toBe(idle.frames);
+  await page.getByRole('button', { name: '深圳天气', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: '深圳天气详情' })).toContainText('当前晴雨效果暂不跟随该数据');
+});
+test('G5: timeout is actionable and late weather cannot overwrite a manual retry', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 120000 : 45000);
+  let release!: () => void; const gate = new Promise<void>(resolve => { release = resolve; }); let requests = 0;
+  await page.route(WEATHER_ROUTE, async route => {
+    const index = ++requests;
+    if (index === 1) await gate;
+    await route.fulfill({ json: weatherFixture({ code: index === 1 ? 65 : 2, cloud: 40 }) });
+  });
+  await ready(page);
+  await expect(page.getByRole('button', { name: '深圳天气', exact: true })).toContainText('暂不可用', { timeout: 12000 });
+  await page.getByRole('button', { name: '深圳天气', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: '深圳天气详情' })).toContainText('天气请求超时');
+  await page.getByRole('button', { name: '刷新天气' }).click();
+  await expect(page.getByRole('dialog', { name: '深圳天气详情' })).toContainText('多云');
+  release(); await page.waitForTimeout(300);
+  await expect(page.getByRole('dialog', { name: '深圳天气详情' })).toContainText('多云');
+  expect(await page.locator('.scene-host canvas').count()).toBe(1);
+});
+test('G7: weather refreshes automatically after ten minutes', async ({ page }) => {
+  await page.clock.install({ time: NIGHT_TIME });
+  let requests = 0;
+  await page.route(WEATHER_ROUTE, route => {
+    const data = weatherFixture(); data.current.temperature_2m = ++requests === 1 ? 26.5 : 29;
+    return route.fulfill({ json: data });
+  });
+  await ready(page);
+  await expect(page.getByRole('button', { name: '深圳天气', exact: true })).toContainText('26.5°C');
+  await page.clock.fastForward(10 * 60 * 1000);
+  await expect(page.getByRole('button', { name: '深圳天气', exact: true })).toContainText('29.0°C');
+  expect(requests).toBe(2);
+});
+for (const width of [768, 390]) test(`G6: Shenzhen weather and clock remain usable at ${width}`, async ({ page }) => {
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 1024 });
+  await ready(page);
+  await expect(page.getByRole('button', { name: '深圳天气', exact: true })).toBeVisible();
+  await expect(page.getByLabel('北京时间')).toContainText('20:00:00');
+  await page.getByRole('button', { name: '深圳天气', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: '深圳天气详情' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `artifacts/harness/weather-${width}.png`, fullPage: true });
+  await page.getByRole('button', { name: '关闭天气详情' }).click();
+  await page.getByRole('button', { name: '2.5D 楼层' }).click();
+  await expect(page.getByRole('button', { name: '切换到 1F', exact: true })).toBeVisible();
+});

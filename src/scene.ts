@@ -13,6 +13,8 @@ import { getFloorLayout } from './floorLayouts';
 import { Architecture } from './architecture';
 import { HospitalAsset } from './hospitalAsset';
 import { ProjectContextAsset } from './projectContextAsset';
+import { SceneAtmosphere } from './atmosphere';
+import { WeatherReading, isFresh } from './weather';
 import { createFloorGeometry } from './floorGeometry';
 import { deviceSystems, DeviceFilter } from './deviceSystems';
 import { createElement } from 'react';
@@ -35,6 +37,8 @@ export class BuildingScene {
   private frame = 0;
   private frameId = 0;
   private lastTime = 0;
+  private lastRenderTime = -Infinity;
+  private renderInterval = 0;
   private destroyed = false;
   private renderDirty = true;
   private mode: '3d' | 'floor' = '3d';
@@ -66,6 +70,10 @@ export class BuildingScene {
   private hdrSource: THREE.DataTexture;
   private exteriorBackground: THREE.Texture;
   private floorBackground = new THREE.Color(0x0a1c2c);
+  private globalLights: { light: THREE.Light; exterior: number; floor: number }[] = [];
+  private atmosphere: SceneAtmosphere;
+  private hospitalLights = new THREE.Group();
+  private weatherEnabled = true;
 
   constructor(private host: HTMLDivElement, private options: Options) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -92,7 +100,7 @@ export class BuildingScene {
       const generator = new THREE.PMREMGenerator(this.renderer);
       const target = generator.fromEquirectangular(texture);
       this.environmentTarget.dispose(); this.environmentTarget = target;
-      this.scene.environment = target.texture; this.scene.environmentIntensity = .24;
+      this.scene.environment = target.texture; this.setIllumination(this.mode);
       generator.dispose(); texture.dispose(); this.hdrSettled = true; this.renderDirty = true;
     }, undefined, () => {
       if (!this.destroyed) { this.hdrSettled = true; this.renderDirty = true; }
@@ -100,6 +108,8 @@ export class BuildingScene {
     });
     const gl = this.renderer.getContext(), info = gl.getExtension('WEBGL_debug_renderer_info');
     const software = info && /swiftshader|llvmpipe|softpipe/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL));
+    // Bound software-GPU submissions, including damping, so expensive frames cannot queue ahead of input.
+    this.renderInterval = software ? 250 : 0;
     // Floating-point multisample resolves are costly on software GPUs. Both paths keep edge smoothing.
     const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: software ? 0 : Math.min(4, this.renderer.capabilities.maxSamples) });
     this.composer = new EffectComposer(this.renderer, target);
@@ -121,22 +131,32 @@ export class BuildingScene {
     this.labels.className = 'scene-labels';
     host.appendChild(this.labels);
     this.scene.fog = new THREE.FogExp2(0x102f4c, 0.0028);
-    this.scene.add(new THREE.HemisphereLight(0x9dc4e5, 0x25251c, .62));
-    const key = new THREE.DirectionalLight(0xffe8c1, 1.35);
+    this.atmosphere = new SceneAtmosphere(this.renderer, software ? 1 : 24);
+    const ambient = new THREE.HemisphereLight(0x9dc4e5, 0x25251c, .28);
+    this.scene.add(ambient);
+    const key = new THREE.DirectionalLight(0xffe8c1, .75);
     key.position.set(-45, 100, 75);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     Object.assign(key.shadow.camera, { left: -110, right: 110, top: 125, bottom: -100, near: 1, far: 350 });
     key.shadow.normalBias = .12; key.shadow.bias = -.00015;
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x6daeff, .65);
+    const rim = new THREE.DirectionalLight(0x6daeff, .7);
     rim.position.set(-70, 50, -70);
     this.scene.add(rim);
-    const skyFill = new THREE.DirectionalLight(0x94c5f2, 1.2);
+    const skyFill = new THREE.DirectionalLight(0x94c5f2, .45);
     skyFill.position.set(80, 90, 30); this.scene.add(skyFill);
+    this.globalLights = [
+      { light: ambient, exterior: .28, floor: .62 },
+      { light: key, exterior: .75, floor: 1.35 },
+      { light: rim, exterior: .7, floor: .65 },
+      { light: skyFill, exterior: .45, floor: 1.2 },
+    ];
+    this.setIllumination('3d');
     this.scene.add(this.city, this.floorMap);
     this.floorMap.visible = false;
     this.city.add(this.surroundings, this.markers);
+    this.city.add(this.atmosphere.group);
     this.createCity();
     this.createFloor();
     this.controls = new OrbitControls(this.camera, canvas);
@@ -188,6 +208,8 @@ export class BuildingScene {
     this.hospital = new HospitalAsset(import.meta.env.BASE_URL + 'assets/project-hospital.glb', () => {
       // Source geometry uses shared project coordinates rather than the zone label anchors.
       this.city.add(this.hospital.root);
+      this.addHospitalLights();
+      this.setIllumination(this.mode);
       this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
       this.options.onModelLoaded();
     }, () => this.options.onError('医院模型加载失败，请检查网络后重新加载场景。'));
@@ -199,6 +221,65 @@ export class BuildingScene {
     for (let i = 0; i < 6; i++) {
       const p = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .3, 16), new THREE.MeshBasicMaterial({ color: i === 2 ? 0xffaa64 : 0x40e5d4 }));
       p.position.set(-33 + i * 15, .5, 36); this.markers.add(p);
+    }
+  }
+  private addHospitalLights() {
+    // Light sources are a display proposal anchored to source bounds, not new building geometry.
+    const box = this.hospital.bounds, size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3()), lights = this.hospitalLights;
+    lights.name = '医院展示照明';
+    const spot = (color: number, intensity: number, range: number, angle: number, position: number[], target: number[]) => {
+      const light = new THREE.SpotLight(color, intensity, range, angle, .85, 2);
+      light.position.fromArray(position); light.target.position.fromArray(target);
+      // Only the existing key light casts shadows; static washes add no shadow render targets.
+      lights.add(light, light.target);
+    };
+    for (const side of [-1, 1]) {
+      spot(0xffd6a0, 3600, size.y * 1.65, .53,
+        [center.x + side * size.x * .32, box.min.y + 2, box.max.z + 12],
+        [center.x + side * size.x * .24, box.min.y + size.y * .42, center.z]);
+    }
+    spot(0x8dbdff, 4600, size.y * 1.8, .62,
+      [box.max.x + 22, box.min.y + size.y * .65, box.min.z - 18],
+      [center.x, box.min.y + size.y * .46, center.z]);
+    spot(0xffcc88, 1700, 75, .85,
+      [center.x - size.x * .3, box.min.y + 18, box.max.z - 6],
+      [center.x - size.x * .3, box.min.y, box.max.z + 14]);
+    this.city.add(lights);
+  }
+  private setIllumination(mode: '3d' | 'floor') {
+    const { day, cloud } = this.atmosphere.profile;
+    const dayStrengths = [1.1, 2.5 * (1 - cloud * .65), .5, .9];
+    this.globalLights.forEach(({ light, exterior, floor }, i) => { light.intensity = mode === '3d' ? THREE.MathUtils.lerp(exterior, dayStrengths[i], day) : floor; });
+    this.hospitalLights.children.forEach(light => {
+      if (light instanceof THREE.SpotLight) {
+        light.userData.nightIntensity ??= light.intensity;
+        light.intensity = light.userData.nightIntensity * THREE.MathUtils.lerp(1, .08, day);
+      }
+    });
+    this.hospital?.setDaylight(day);
+    this.scene.environment = mode === '3d' && this.weatherEnabled && this.atmosphere.environment ? this.atmosphere.environment.texture : this.environmentTarget.texture;
+    this.scene.environmentIntensity = mode === '3d' ? THREE.MathUtils.lerp(.09, .85, day) : .24;
+    this.bloom.strength = mode === '3d' ? THREE.MathUtils.lerp(.3, .12, day) : .14;
+    this.bloom.radius = mode === '3d' ? .32 : .2;
+    this.bloom.threshold = mode === '3d' ? THREE.MathUtils.lerp(1.15, 1.65, day) : 1.65;
+    this.scene.background = mode === 'floor' ? this.floorBackground : this.weatherEnabled && this.atmosphere.ready ? this.atmosphere.sky : this.exteriorBackground;
+    this.atmosphere.group.visible = mode === '3d' && this.weatherEnabled && !this.contextView;
+    this.applyFog();
+  }
+  private applyFog() {
+    if (!(this.scene.fog instanceof THREE.FogExp2)) return;
+    const { day, kind } = this.atmosphere.profile;
+    const wet = ['rain', 'snow', 'storm', 'fog'].includes(kind);
+    this.scene.fog.color.set(this.mode === 'floor' ? 0x102f4c : wet ? 0x182f46 : 0x102f4c);
+    if (this.mode === '3d') this.scene.fog.color.lerp(new THREE.Color(wet ? 0x8398a8 : 0x9bbfd8), day);
+    this.scene.fog.density = this.mode === '3d' && this.contextView ? .00012 : this.mode === 'floor' ? .0028 : wet ? kind === 'fog' ? .005 : .0032 : THREE.MathUtils.lerp(.0028, .0014, day);
+  }
+  setAtmosphere(weather: WeatherReading | undefined, now: Date, enabled: boolean) {
+    this.weatherEnabled = enabled;
+    if (this.atmosphere.update(weather && isFresh(weather, now.getTime()) ? weather : undefined, now, enabled)) {
+      this.setIllumination(this.mode);
+      if (this.mode === '3d') { this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true; }
     }
   }
   private addLabel(text: string, position: THREE.Vector3, floorOnly: boolean, action: () => void, className: string) {
@@ -255,10 +336,9 @@ export class BuildingScene {
       this.controls.minDistance = 55; this.controls.maxDistance = this.contextView ? 6000 : 520;
     }
     this.mode = mode; this.city.visible = mode === '3d'; this.floorMap.visible = mode === 'floor';
+    this.setIllumination(mode);
     this.camera.far = mode === '3d' && this.contextView ? 10000 : 1200; this.camera.updateProjectionMatrix();
-    if (this.scene.fog instanceof THREE.FogExp2) this.scene.fog.density = mode === '3d' && this.contextView ? .00012 : .0028;
     this.floorAO.enabled = mode === 'floor';
-    this.scene.background = mode === 'floor' ? this.floorBackground : this.exteriorBackground;
     this.renderDirty = true;
     this.renderer.shadowMap.needsUpdate = true;
     this.controls.autoRotate = this.auto && mode === '3d'; this.controls.update();
@@ -308,7 +388,7 @@ export class BuildingScene {
     if (this.mode === '3d') {
       this.contextView = false; this.controls.maxDistance = 520;
       this.camera.far = 1200; this.camera.updateProjectionMatrix();
-      if (this.scene.fog instanceof THREE.FogExp2) this.scene.fog.density = .0028;
+      this.setIllumination(this.mode);
     }
     const auto = this.controls.autoRotate; this.controls.autoRotate = false;
     this.controls.enableDamping = false;
@@ -322,7 +402,7 @@ export class BuildingScene {
     if (this.mode !== '3d' || !this.context.ready) return;
     this.clearMomentum(); this.contextView = true;
     this.controls.maxDistance = 6000; this.camera.far = 10000; this.camera.updateProjectionMatrix();
-    if (this.scene.fog instanceof THREE.FogExp2) this.scene.fog.density = .00012;
+    this.setIllumination(this.mode);
     const sphere = this.context.bounds.getBoundingSphere(new THREE.Sphere());
     const margin = innerWidth > 1050 ? (innerWidth <= 1240 ? 493 : 646) : 22;
     const aspect = Math.max(100, this.host.clientWidth - margin) / this.host.clientHeight;
@@ -390,10 +470,11 @@ export class BuildingScene {
     // Preserve the 60 Hz easing on hardware while avoiding a long tail of expensive software frames.
     this.controls.dampingFactor = 1 - Math.pow(1 - .09, elapsed * 60);
     this.controls.update(Math.min(elapsed, .05)); this.lastTime = time;
+    if (this.atmosphere.tick(time)) this.renderDirty = true;
     // Static architecture needs no repeated GPU work. Controls still tick for smooth damping/patrol.
-    if (this.renderDirty) {
+    if (this.renderDirty && time - this.lastRenderTime >= this.renderInterval) {
       this.renderer.info.reset(); this.composer.render(); this.frame++;
-      this.renderDirty = false;
+      this.renderDirty = false; this.lastRenderTime = time;
     }
     for (const label of this.labelNodes) {
       const p = label.position.clone().project(this.camera);
@@ -410,6 +491,7 @@ export class BuildingScene {
     this.clearFloor();
     this.context.buildings.removeFromParent(); this.context.ground.removeFromParent(); this.context.dispose();
     this.hospital.root.removeFromParent(); this.hospital.dispose();
+    this.atmosphere.dispose();
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
     this.scene.traverse(obj => {
       if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) {

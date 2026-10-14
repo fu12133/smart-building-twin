@@ -2,6 +2,8 @@
 
 These assets are packaged locally. The browser never calls an asset API or remote image server. Current hospital, surrounding buildings and site geometry come from the user's project white model; material finishes and floor diagrams remain unverified proposals.
 
+The scene now includes proposed static lighting and physically based coated glazing on unchanged source geometry. Shenzhen weather is a separate online data request, not a model/texture asset download. Current weather-model data and solar times are attributed to [Open-Meteo](https://open-meteo.com/en/docs), data CC BY 4.0; the free API is for the current non-commercial demonstration ([service terms](https://open-meteo.com/en/terms)). Commercial deployment requires an appropriately licensed weather service/plan. No secret/API key is embedded. UI includes source and data time; model weather is not an onsite sensor measurement.
+
 ## Project white model (current)
 
 `project-hospital.glb` is derived locally from the user-provided `项目白模.dwg`, SHA-256 `bdab765f1b3c4a486557809395292e1295641687490bcb85f8bc509a6055e564`. LibreDWG 0.14 decoded 42 mesh entities. The connected tower/podium mesh **handle 584** is retained, including its architectural details; separate overlapping curtain-wall copies (564/568/569) and displaced study geometry are excluded. Original surroundings/site are restored separately in `project-context.glb`. The original DWG and decoded JSON are not packaged or uploaded.

@@ -10,6 +10,7 @@ test('production assets and model interactions work under repository URL', async
   page.on('response', r => { if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`); });
   const assets = ['night-city.hdr', 'project-context.glb', 'project-hospital.glb'];
   const assetResponses = Promise.all(assets.map(name => page.waitForResponse(r => r.url() === new URL('assets/' + name, baseURL!).href)));
+  const weatherResponse = page.waitForResponse(r => r.url().startsWith('https://api.open-meteo.com/v1/forecast?'));
   await page.goto(baseURL!);
   for (const response of await assetResponses) expect(response.status(), response.url()).toBe(200);
   await expect(page.getByRole('heading', { name: '智慧医院综合管理平台' })).toBeVisible();
@@ -18,6 +19,25 @@ test('production assets and model interactions work under repository URL', async
   // Cold public asset download/graphics initialization is separate from UI interaction latency.
   await expect(page.locator('.model-state')).toContainText('医院模型已加载', { timeout: 30000 });
   await expect(page.locator('.context-state')).toContainText('白模周边已加载', { timeout: 30000 });
+  await expect(page.locator('.scene-info')).toContainText('材质与灯光方案');
+  // Public verification uses actual weather, not the deterministic acceptance fixture.
+  await expect(page.getByRole('button', { name: '深圳天气', exact: true })).toBeVisible();
+  const response = await weatherResponse;
+  expect(response.status(), 'Actual weather API status').toBe(200);
+  const weatherData = await response.json();
+  expect(typeof weatherData.current.temperature_2m).toBe('number');
+  expect(Math.abs(Date.now() - weatherData.current.time * 1000), 'Current weather model data are fresh').toBeLessThan(90 * 60000);
+  await expect(page.getByRole('button', { name: '深圳天气', exact: true })).toContainText(weatherData.current.temperature_2m.toFixed(1) + '°C');
+  await page.getByRole('button', { name: '深圳天气', exact: true }).click();
+  const weatherDetails = page.getByRole('dialog', { name: '深圳天气详情' });
+  await expect(weatherDetails).toContainText('Open-Meteo 天气模型');
+  await expect(weatherDetails).toContainText('非现场实测');
+  await expect(weatherDetails).toContainText('已更新');
+  await expect(weatherDetails.locator('.weather-data-time')).toContainText('北京时间');
+  mkdirSync('artifacts/harness', { recursive: true });
+  await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/weather-live-online.png' : 'artifacts/harness/weather-live-local.png' });
+  await expect(page.getByLabel('北京时间')).toBeVisible();
+  await page.getByRole('button', { name: '关闭天气详情' }).click();
   await expect(page.getByRole('button', { name: '选择A区' })).toBeVisible();
   expect(await page.evaluate(() => typeof (window as any).__BUILDING_HARNESS__)).toBe('undefined');
   const rect = (await canvas.boundingBox())!;

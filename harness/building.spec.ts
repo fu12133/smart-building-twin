@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
+import { NIGHT_TIME, WEATHER_ROUTE, weatherFixture } from './weather-fixture';
 
 type Snapshot = { camera: number[]; target: number[]; distance: number; frames: number; objects: number; gpuGeometries: number; mode: string; auto: boolean; autoActive: boolean; selected: string; floor: number; devicesVisible: boolean; surroundingsVisible: boolean; contextReady: boolean; contextView: boolean; lastPickSourceHandle: number | null; assetsReady: boolean };
 const snapshot = (page: Page): Promise<Snapshot> => page.evaluate(() => (window as any).__BUILDING_HARNESS__());
@@ -10,6 +11,9 @@ const errors = new Map<Page, string[]>();
 const initializationTimeout = process.env.CI ? 45000 : 12000;
 mkdirSync('artifacts/harness', { recursive: true });
 test.beforeEach(async ({ page }) => {
+  // Keep existing geometry/camera checks independent of external weather and time of day.
+  await page.clock.setFixedTime(NIGHT_TIME);
+  await page.route(WEATHER_ROUTE, route => route.fulfill({ json: weatherFixture() }));
   const messages: string[] = []; errors.set(page, messages);
   page.on('pageerror', e => messages.push(e.message));
   page.on('console', m => { if (m.type() === 'error') messages.push(m.text()); });
@@ -22,6 +26,7 @@ async function ready(page: Page) {
   await expect.poll(async () => (await snapshot(page)).assetsReady, { timeout: initializationTimeout }).toBe(true);
   expect((await snapshot(page)).objects).toBeGreaterThan(1000);
   await expect(page.locator('.model-state')).toContainText('医院模型已加载');
+  await expect(page.locator('.scene-info')).toContainText('材质与灯光方案');
   await expect(page.locator('.asset-credit')).toContainText('项目白模.dwg');
 }
 
@@ -38,6 +43,7 @@ test('V1: real pointer rotation changes camera and rendered image', async ({ pag
   await page.mouse.move(rect.x + rect.width * 0.73, rect.y + rect.height * 0.58, { steps: 8 });
   await page.mouse.up();
   await expect.poll(async () => delta((await snapshot(page)).camera, before.camera)).toBeGreaterThan(20);
+  await expect.poll(async () => (await snapshot(page)).frames).toBeGreaterThan(before.frames);
   const imageAfter = await page.screenshot({ clip: rect });
   expect(createHash('sha256').update(imageBefore).digest('hex')).not.toBe(createHash('sha256').update(imageAfter).digest('hex'));
   await page.screenshot({ path: 'artifacts/harness/rotated-desktop.png' });
@@ -160,6 +166,7 @@ test('V6: lost graphics context produces recovery UI', async ({ page }) => {
   await expect(page.getByRole('button', { name: '重新加载' })).toBeVisible();
   await page.getByRole('button', { name: '重新加载' }).click();
   await expect(page.getByRole('alert')).toBeHidden();
+  await expect.poll(() => page.evaluate(() => typeof window.__BUILDING_HARNESS__), { timeout: initializationTimeout }).toBe('function');
   await expect.poll(async () => (await snapshot(page)).frames, { timeout: initializationTimeout }).toBeGreaterThan(0);
 });
 
