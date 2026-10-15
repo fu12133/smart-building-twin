@@ -9,6 +9,7 @@ This project follows the user's OpenSpec + harness workflow.
 - Use the existing `BuildingScene` for camera and GPU lifecycle. Call `dispose` when unmounting. Clear OrbitControls residual momentum before exact pose restoration.
 - When locating equipment across buildings/floors, apply pending selection after floor/mode effects. Floor selection must not exceed the selected building's floor count.
 - Keep Chinese as the default UI language and support the user-requested English switch across visible/accessibility copy. Preserve source filenames/equipment IDs and all demo/proposal notices; switching language must not recreate BuildingScene or reset its pose/business state. Use Asia/Shanghai for displayed times in both languages.
+- Identify atmosphere previews explicitly and keep real weather/time intact. Solar direction remains illustrative until a true-north reference is provided; do not describe it as verified solar analysis.
 - Preview runs on `127.0.0.1:4187`; do not stop or overwrite unrelated servers.
 - Validate relevant changes using `npm run spec:validate`, `npm run build` and `npm run harness`. Harness interactions must use user-facing controls; internal snapshot is read-only and development-only. Controlled failure injection is allowed for graphics error scenarios.
 - For exact model-geometry comparisons, use read-only visible scene geometry statistics; renderer triangle counters also include offscreen sky and shadow passes.

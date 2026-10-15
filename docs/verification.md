@@ -247,3 +247,9 @@ S1检查真实渲染太阳投影处的亮核像素，非DOM图标；检查预览
 首次云端 [38719659803](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38719659803) 为 **50/51（27.4分钟）**，太阳4项、语言5项和全部原楼层/周边/天气检查均通过。医院方案D1轨迹显示可见几何、GPU资源、三次往返和真实旋转断言已完成，无浏览器错误；最终截图超过120秒全测试预算。该多阶段压力用例现与既有天气多阶段用例一样使用180秒CI总预算（本地45秒），旋转后等待渲染就绪，断言保留。
 
 软件GPU继续使用2K太阳绘制源，但背景Cube转换限制512面、反射预过滤输入限制1024×512，硬件GPU保留完整2K输入。背景RenderTarget/临时反射纹理更新和销毁均释放，太阳/光源/模型不替换为CSS。优化后本地D1+S1 **2/2（28.2秒）**，最终完整 **51/51（5.7分钟）**；手机说明移开太阳后的太阳专项 **4/4（31.4秒）**，子路径真实生产最终 **1/1（21.6秒）**。768/390同时检查了“观察太阳”后的投影位置与控件；手机截图与最终生产截图已查看。完整最终本地JSON为 `artifacts/ci/sunlight-bounded-full-local.json`。最终构建JS `index-CyrTDY7W.js`、CSS `index-CIaPz7Nv.css`、Three块 `three-D759iadV.js`；公网尚待重新发布验收。
+
+最终复验工作流 [38725968847](https://github.com/guangfubill-crypto/smart-building-twin/actions/runs/38725968847) 成功：严格 **4/4**、Linux Chromium/SwiftShader **51/51（12.6分钟）**，医院方案D1全部断言及截图完成（58.4秒），太阳S1/S2分别26.5/15.1秒。构建作业13m21s，部署30秒。运行源码 `693b148a2f77529fcbee045523c97ba8be558e58`。
+
+真实公网 `?v=693b148` 的HTML为HTTP200，JS `index-CyrTDY7W.js`、CSS `index-CIaPz7Nv.css` 和Three块 `three-D759iadV.js` 与最终构建一致。实际公网生产验收 **1/1（33.7秒）** 通过，含原模型/周边/HDR和真实天气请求、真实指针旋转/全景/复位、13F设备/筛选与语言、太阳预览不改天气卡片、显式观察太阳、返回实时天气、生产无开发入口和无浏览器/资源错误。`sunlight-online.png`已实际检查，太阳圆盘、光晕和玻璃高光可见，天气/时间仍为真实深圳夜间数据，预览有明确非实时标签。
+
+OpenSpec已归档为 `2026-10-15-visible-sunlight`，building-visualization新增1项要求，归档后严格基线 **3/3通过**。后续文档与公网截图以skip-ci保存，运行版本保持693b148；4187开发预览保留，临时4188已关闭。
