@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Visible sunlight and explicit sunny preview
-The exterior MUST show a sun/halo and aligned warm sunlight by default during Shenzhen daytime and a softly lit moon with cool directional fill at night, without preview or observation actions. Clouds and precipitation MUST attenuate the celestial effect, while actual weather/time remain unchanged. Celestial placement and moon phase MUST be identified as illustrative. Initial/reset framing MUST include the active celestial body on desktop and narrow screens without altering source geometry. The optional Chinese/English sunny-preview control MUST identify non-live display illumination, preserve real weather/time, source assets, camera and selections, and restore Shenzhen atmosphere when cancelled.
+The exterior MUST default to a visible sun and warm sunlight in Shenzhen daytime and a moon with cool fill at night, without preview actions. Weather MUST attenuate these illustrative effects while real readings, source geometry and user state remain intact. Initial/reset framing MUST include the active body on desktop and narrow screens. Optional sunny preview MUST be bilingual, explicitly non-live and reversible.
 
 #### Scenario: Clear daylight and adverse weather
 - **WHEN** the page opens in daylight or weather changes to clouds, rain or night
