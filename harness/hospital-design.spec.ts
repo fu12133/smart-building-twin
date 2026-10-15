@@ -5,6 +5,8 @@ import { NIGHT_TIME, WEATHER_ROUTE, weatherFixture } from './weather-fixture';
 
 const state = (page: Page) => page.evaluate(() => (window as any).__BUILDING_HARNESS__());
 const fingerprint = (data: Buffer) => createHash('sha256').update(data).digest('hex');
+// Exterior mode changes can recompile software-GPU pipelines; keep this separate from UI latency.
+const renderTimeout = process.env.CI ? 45000 : 12000;
 mkdirSync('artifacts/harness', { recursive: true });
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(NIGHT_TIME);
@@ -13,10 +15,11 @@ test.beforeEach(async ({ page }) => {
 async function ready(page: Page) {
   await page.goto('/');
   await expect(page.locator('.model-state')).toContainText('医院模型已加载', { timeout: process.env.CI ? 45000 : 20000 });
-  await expect.poll(async () => (await state(page)).assetsReady, { timeout: 20000 }).toBe(true);
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: process.env.CI ? 45000 : 20000 }).toBe(true);
 }
 
 test('D1: original proposal toggles real rendered detail without moving the source or camera', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 120000 : 45000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await ready(page);
   await expect(page.locator('.scene-info')).toContainText('原创现代医院');
@@ -25,7 +28,7 @@ test('D1: original proposal toggles real rendered detail without moving the sour
   const design = await page.locator('.scene-host canvas').screenshot();
   await page.getByRole('button', { name: '图层设置' }).click();
   await page.getByLabel('原创医院方案', { exact: true }).uncheck();
-  await expect.poll(async () => (await state(page)).assetsReady).toBe(true);
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
   const source = await state(page);
   expect(source.camera).toEqual(original.camera); expect(source.target).toEqual(original.target);
   expect(source.objects).toBeLessThan(original.objects - 1000);
@@ -35,19 +38,19 @@ test('D1: original proposal toggles real rendered detail without moving the sour
   await page.screenshot({ path: 'artifacts/harness/original-hospital-source.png' });
   await page.getByRole('button', { name: '2.5D 楼层' }).click();
   await page.getByRole('button', { name: '3D 院区' }).click();
-  await expect.poll(async () => (await state(page)).assetsReady).toBe(true);
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
   expect((await state(page)).originalProposal).toBe(false);
   expect((await state(page)).camera).toEqual(original.camera);
   await page.getByRole('button', { name: '图层设置' }).click();
   await page.getByLabel('原创医院方案', { exact: true }).check();
   await page.getByRole('button', { name: '图层设置' }).click();
-  await expect.poll(async () => (await state(page)).assetsReady).toBe(true);
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
   const restored = await state(page); expect(restored.objects).toBe(original.objects);
   for (let i = 0; i < 3; i++) {
     await page.getByRole('button', { name: '2.5D 楼层' }).click();
-    await expect.poll(async () => (await state(page)).assetsReady).toBe(true);
+    await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
     await page.getByRole('button', { name: '3D 院区' }).click();
-    await expect.poll(async () => (await state(page)).assetsReady).toBe(true);
+    await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
   }
   expect((await state(page)).gpuGeometries).toBe(restored.gpuGeometries);
   const canvas = page.locator('.scene-host canvas'), rect = (await canvas.boundingBox())!;
@@ -68,7 +71,7 @@ test('D2: original proposal renders in daylight and recovers after reload', asyn
   await page.locator('.scene-host canvas').evaluate(c => c.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
   await page.getByRole('button', { name: '重新加载' }).click();
   await expect(page.locator('.model-state')).toContainText('医院模型已加载', { timeout: 30000 });
-  await expect.poll(async () => (await state(page)).assetsReady).toBe(true);
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
   expect((await state(page)).proposalDetails).toBe(first.proposalDetails);
   await expect(page.locator('.scene-host canvas')).toHaveCount(1);
 });
@@ -81,7 +84,7 @@ for (const width of [768, 390]) test(`D3: original proposal control is usable at
   await expect.poll(async () => (await state(page)).originalProposal).toBe(false);
   await page.getByLabel('原创医院方案', { exact: true }).check();
   await page.getByRole('button', { name: '图层设置' }).click();
-  await expect.poll(async () => (await state(page)).assetsReady).toBe(true);
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `artifacts/harness/original-hospital-${width}.png`, fullPage: true });
 });
