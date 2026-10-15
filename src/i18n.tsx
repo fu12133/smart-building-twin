@@ -91,6 +91,12 @@ const english: Record<string, string> = {
   '无法启动三维渲染，请使用支持 WebGL 的浏览器并开启硬件加速。': 'Unable to start 3D rendering. Use a WebGL browser with hardware acceleration enabled.',
   '当前预览不支持全屏，可在独立浏览器中打开。': 'Full screen is unavailable here. Open the site in a separate browser.',
   '选择语言': 'Language',
+  '开启日照预览': 'Start sunlight preview', '结束日照预览': 'End sunlight preview', '日照预览': 'Sunlight preview',
+  '返回实时天气': 'Return to live weather', '晴天日照预览': 'Sunny lighting preview',
+  '晴天日照预览 · 非实时天气': 'Sunny lighting preview · Not live weather',
+  '日照方向为展示近似': 'Sun direction is illustrative',
+  '观察太阳': 'View the sun',
+  '太阳方向为展示近似，未经真北校准；晴天日照预览不代表深圳实时天气。': 'Sun direction is illustrative and not calibrated to true north. Sunny lighting preview does not represent live Shenzhen weather.',
 };
 
 const helpEnglish = 'The geometry comes from the supplied project DWG; tower and enclosed podium form one building. A uniform scale uses the brief’s 69.5 m structural tower height. The DWG unit header says metres, but its structural height is 205 coordinate units, so dimensions are not survey-verified. The model bounds are approximately 72.6 × 52.3 m, differing from the brief’s 70 × 38 m; no non-uniform stretch was applied. The brief specifies a 26.7 m podium, 28,426 m² renovation area and CNY 287 million investment, with 18 aboveground floors and two basements. Floors 13 and 14 retain their existing use. Basement works are partial; underground geometry and every floor layout are schematic and unverified. Each zone/floor has a distinct proposal with gray slabs, white partitions, doors, aligned service cores and stairs; outer rooms and corridors vary by floor. Filter device markers by system and change floors using the floor rail. Actual interior plans are needed for calibration. Building, podium, city context and site share the original source coordinates. The optional original hospital design adds curtain-wall frames, shading fins, floor bands and a glass entrance canopy; these are proposed details, not verified as-built geometry. Turn off Original hospital design in Scene layers to inspect the source presentation. No institution name or replacement city/site is introduced. Glass, stone and site finishes are proposals without verified photographs. Operational indicators are demo data with no live BIM, IoT or clinical connection. Full source model shows the larger context; Reset view returns to the hospital.';

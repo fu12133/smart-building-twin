@@ -11,4 +11,5 @@ This project follows the user's OpenSpec + harness workflow.
 - Keep Chinese as the default UI language and support the user-requested English switch across visible/accessibility copy. Preserve source filenames/equipment IDs and all demo/proposal notices; switching language must not recreate BuildingScene or reset its pose/business state. Use Asia/Shanghai for displayed times in both languages.
 - Preview runs on `127.0.0.1:4187`; do not stop or overwrite unrelated servers.
 - Validate relevant changes using `npm run spec:validate`, `npm run build` and `npm run harness`. Harness interactions must use user-facing controls; internal snapshot is read-only and development-only. Controlled failure injection is allowed for graphics error scenarios.
+- For exact model-geometry comparisons, use read-only visible scene geometry statistics; renderer triangle counters also include offscreen sky and shadow passes.
 - Check rendered screenshots when layout or model framing changes. Update `docs/verification.md` with actual evidence, then archive completed OpenSpec changes.

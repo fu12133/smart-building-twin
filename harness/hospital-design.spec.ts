@@ -31,7 +31,8 @@ test('D1: original proposal toggles real rendered detail without moving the sour
   await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
   const source = await state(page);
   expect(source.camera).toEqual(original.camera); expect(source.target).toEqual(original.target);
-  expect(source.objects).toBeLessThan(original.objects - 1000);
+  // Render counters also include one-off sky cube conversion and shadow passes.
+  expect(source.visibleTriangles).toBeLessThan(original.visibleTriangles - 1000);
   await expect(page.locator('.scene-info')).toContainText('源白模形体');
   await page.getByRole('button', { name: '图层设置' }).click();
   expect(fingerprint(await page.locator('.scene-host canvas').screenshot())).not.toBe(fingerprint(design));
@@ -45,7 +46,7 @@ test('D1: original proposal toggles real rendered detail without moving the sour
   await page.getByLabel('原创医院方案', { exact: true }).check();
   await page.getByRole('button', { name: '图层设置' }).click();
   await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
-  const restored = await state(page); expect(restored.objects).toBe(original.objects);
+  const restored = await state(page); expect(restored.visibleTriangles).toBe(original.visibleTriangles);
   for (let i = 0; i < 3; i++) {
     await page.getByRole('button', { name: '2.5D 楼层' }).click();
     await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);

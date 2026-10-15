@@ -103,4 +103,11 @@ html[lang=en] .floor-rail small{font-size:6px;letter-spacing:-.3px}
 html[lang=en] .building-info .building-details{gap:10px 12px}
 html[lang=en] .building-info .building-details>div{flex-wrap:nowrap;gap:3px}
 html[lang=en] .building-info .building-details small{display:none}
+.sun-preview{display:inline-flex;align-items:center;align-self:flex-start;gap:5px;pointer-events:auto;color:#ffe1a5;background:#493c265c;border:1px solid #b28d4a80;border-radius:4px;padding:5px 8px;font-size:10px;line-height:1.3;text-shadow:none}
+.sun-preview[aria-pressed=true]{background:#71502699;border-color:#e5bd72;color:#ffedc9}.sun-layer-note{display:block;color:#bda77c;font-size:9px;line-height:1.5;padding:4px 0}.sun-provenance{font-size:11px;line-height:1.8;color:#a4bac4;margin:12px 0}
+.sun-controls{display:flex;flex-wrap:wrap;gap:6px;pointer-events:auto}
+@media(max-width:760px){.sun-preview{font-size:8px;padding:4px 6px}.scene-info .sun-preview{margin-top:2px}}
 @media(min-width:1051px){html[lang=en] .building-info .building-details{row-gap:6px}html[lang=en] .building-info .inspect-floor{margin-bottom:4px}html[lang=en] .building-info .project-scope{padding:1px 0}}
+/* Keep scene labels readable against the bright daytime sky without covering the model. */
+.scene-top h2,.scene-info,.scene-top .eyebrow{text-shadow:0 1px 2px #061827,0 0 7px #061827}
+.scene-info{color:#c9e0ed}.scene-info .atmosphere-state{color:#d5e9f2!important}

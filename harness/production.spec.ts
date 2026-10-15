@@ -115,6 +115,14 @@ test('production assets and model interactions work under repository URL', async
   await expect(page.getByRole('dialog', { name: 'Shenzhen weather details' })).toContainText('Not onsite measurements');
   await page.getByRole('button', { name: 'Close weather details' }).click();
   await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/language-en-online.png' : 'artifacts/harness/language-en-production.png' });
+  const liveWeather = await page.getByRole('button', { name: 'Shenzhen weather', exact: true }).innerText();
+  await page.getByRole('button', { name: 'Start sunlight preview', exact: true }).click();
+  await expect(page.getByLabel('Exterior weather effects', { exact: true })).toContainText('Not live weather');
+  expect(await page.getByRole('button', { name: 'Shenzhen weather', exact: true }).innerText()).toBe(liveWeather);
+  await page.getByRole('button', { name: 'View the sun', exact: true }).click();
+  await page.waitForTimeout(800); // Let the explicit sky observation pose reach the compositor before capture.
+  await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/sunlight-online.png' : 'artifacts/harness/sunlight-production.png' });
+  await page.getByRole('button', { name: 'End sunlight preview', exact: true }).click();
   await page.getByRole('button', { name: '中文', exact: true }).click();
   await expect(page.getByRole('heading', { name: '智慧医院综合管理平台' })).toBeVisible();
   expect(errors, 'Production console errors').toEqual([]);

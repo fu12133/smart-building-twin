@@ -253,8 +253,20 @@ export class BuildingScene {
   }
   private setIllumination(mode: '3d' | 'floor') {
     const { day, cloud } = this.atmosphere.profile;
-    const dayStrengths = [1.1, 2.5 * (1 - cloud * .65), .5, .9];
+    const dayStrengths = [.8, .4 + 3.2 * this.atmosphere.sunStrength, .5, .7];
     this.globalLights.forEach(({ light, exterior, floor }, i) => { light.intensity = mode === '3d' ? THREE.MathUtils.lerp(exterior, dayStrengths[i], day) : floor; });
+    const sunlight = this.globalLights[1]?.light as THREE.DirectionalLight | undefined;
+    if (sunlight) {
+      if (mode === '3d' && day > 0) {
+        sunlight.target.position.set(0, 27, 0);
+        sunlight.position.copy(this.atmosphere.sunDirection).multiplyScalar(150).add(sunlight.target.position);
+        sunlight.color.set(this.atmosphere.preview || day < .4 ? 0xffd7a0 : 0xfff0d5);
+      } else {
+        sunlight.position.set(-45, 100, 75); sunlight.target.position.set(0, 0, 0); sunlight.color.set(0xffe8c1);
+      }
+      // DirectionalLight targets must participate in world-matrix updates.
+      sunlight.target.updateMatrixWorld();
+    }
     this.hospitalLights.children.forEach(light => {
       if (light instanceof THREE.SpotLight) {
         light.userData.nightIntensity ??= light.intensity;
@@ -263,7 +275,7 @@ export class BuildingScene {
     });
     this.hospital?.setDaylight(day);
     this.scene.environment = mode === '3d' && this.weatherEnabled && this.atmosphere.environment ? this.atmosphere.environment.texture : this.environmentTarget.texture;
-    this.scene.environmentIntensity = mode === '3d' ? THREE.MathUtils.lerp(.09, .85, day) : .24;
+    this.scene.environmentIntensity = mode === '3d' ? THREE.MathUtils.lerp(.09, .65, day) : .24;
     this.bloom.strength = mode === '3d' ? THREE.MathUtils.lerp(.3, .12, day) : .14;
     this.bloom.radius = mode === '3d' ? .32 : .2;
     this.bloom.threshold = mode === '3d' ? THREE.MathUtils.lerp(1.15, 1.65, day) : 1.65;
@@ -276,12 +288,12 @@ export class BuildingScene {
     const { day, kind } = this.atmosphere.profile;
     const wet = ['rain', 'snow', 'storm', 'fog'].includes(kind);
     this.scene.fog.color.set(this.mode === 'floor' ? 0x102f4c : wet ? 0x182f46 : 0x102f4c);
-    if (this.mode === '3d') this.scene.fog.color.lerp(new THREE.Color(wet ? 0x8398a8 : 0x9bbfd8), day);
-    this.scene.fog.density = this.mode === '3d' && this.contextView ? .00012 : this.mode === 'floor' ? .0028 : wet ? kind === 'fog' ? .005 : .0032 : THREE.MathUtils.lerp(.0028, .0014, day);
+    if (this.mode === '3d') this.scene.fog.color.lerp(new THREE.Color(wet ? 0x8398a8 : 0x86acc8), day);
+    this.scene.fog.density = this.mode === '3d' && this.contextView ? .00012 : this.mode === 'floor' ? .0028 : wet ? kind === 'fog' ? .005 : .0032 : THREE.MathUtils.lerp(.0028, .0009, day);
   }
-  setAtmosphere(weather: WeatherReading | undefined, now: Date, enabled: boolean) {
+  setAtmosphere(weather: WeatherReading | undefined, now: Date, enabled: boolean, sunPreview = false) {
     this.weatherEnabled = enabled;
-    if (this.atmosphere.update(weather && isFresh(weather, now.getTime()) ? weather : undefined, now, enabled)) {
+    if (this.atmosphere.update(weather && isFresh(weather, now.getTime()) ? weather : undefined, now, enabled, sunPreview)) {
       this.setIllumination(this.mode);
       if (this.mode === '3d') { this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true; }
     }
@@ -434,6 +446,15 @@ export class BuildingScene {
     offset.setLength(THREE.MathUtils.clamp(offset.length() * factor, this.controls.minDistance, this.controls.maxDistance));
     this.camera.position.copy(this.controls.target).add(offset); this.controls.update();
   }
+  viewSun() {
+    if (this.mode !== '3d' || this.atmosphere.sunStrength <= 0) return;
+    this.clearMomentum();
+    const direction = this.atmosphere.sunDirection;
+    const distance = this.camera.position.distanceTo(this.controls.target);
+    const orbit = new THREE.Spherical(distance, this.controls.maxPolarAngle, Math.atan2(-direction.x, -direction.z));
+    this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(orbit));
+    this.controls.update(); this.renderDirty = true;
+  }
   private key(e: KeyboardEvent) {
     if (e.key === '+' || e.key === '=') { e.preventDefault(); this.zoom(0.85); return; }
     if (e.key === '-') { e.preventDefault(); this.zoom(1.15); return; }
@@ -502,7 +523,17 @@ export class BuildingScene {
     }
     this.frameId = requestAnimationFrame(this.animate);
   };
-  snapshot() { return { camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), originalProposal: this.originalProposal, proposalDetails: this.hospital.proposalDetails, mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && this.context.ready && !this.renderDirty }; }
+  private visibleTriangles() {
+    let count = 0;
+    this.scene.traverseVisible(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const geometry = object.geometry, available = geometry.index?.count ?? geometry.attributes.position?.count ?? 0;
+      const vertices = Math.min(Math.max(0, available - geometry.drawRange.start), geometry.drawRange.count);
+      count += Math.floor(vertices / 3) * (object instanceof THREE.InstancedMesh ? object.count : 1);
+    });
+    return count;
+  }
+  snapshot() { return { visibleTriangles: this.visibleTriangles(), sun: { preview: this.atmosphere.preview, strength: this.atmosphere.sunStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.sunStrength > 0, direction: this.atmosphere.sunDirection.toArray(), screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), originalProposal: this.originalProposal, proposalDetails: this.hospital.proposalDetails, mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && this.context.ready && !this.renderDirty }; }
   dispose() {
     this.destroyed = true; cancelAnimationFrame(this.frameId); this.observer.disconnect(); this.controls.dispose(); this.disposables.forEach(fn => fn());
     this.clearFloor();
