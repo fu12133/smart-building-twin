@@ -257,10 +257,11 @@ export class BuildingScene {
     this.globalLights.forEach(({ light, exterior, floor }, i) => { light.intensity = mode === '3d' ? THREE.MathUtils.lerp(exterior, dayStrengths[i], day) : floor; });
     const sunlight = this.globalLights[1]?.light as THREE.DirectionalLight | undefined;
     if (sunlight) {
-      if (mode === '3d' && day > 0) {
+      if (mode === '3d' && this.weatherEnabled && (day > 0 || this.atmosphere.moonStrength > 0)) {
         sunlight.target.position.set(0, 27, 0);
         sunlight.position.copy(this.atmosphere.sunDirection).multiplyScalar(150).add(sunlight.target.position);
-        sunlight.color.set(this.atmosphere.preview || day < .4 ? 0xffd7a0 : 0xfff0d5);
+        sunlight.color.set(day === 0 ? 0xb7d5ff : this.atmosphere.preview || day < .4 ? 0xffd7a0 : 0xfff0d5);
+        if (day === 0) sunlight.intensity = .65 * this.atmosphere.moonStrength;
       } else {
         sunlight.position.set(-45, 100, 75); sunlight.target.position.set(0, 0, 0); sunlight.color.set(0xffe8c1);
       }
@@ -423,7 +424,8 @@ export class BuildingScene {
     this.controls.enableDamping = false;
     const fit = Math.max(1, Math.min(1.85, 1.05 / this.camera.aspect));
     const floorFit = this.floorFit(), x = innerWidth <= 760 ? 0 : 2; this.fittedFloorScale = floorFit;
-    this.camera.position.set(...(this.mode === '3d' ? [-105 * fit, 80 * fit, 138 * fit] : [x, 50 * floorFit, 44 * floorFit + 3]) as [number, number, number]);
+    const exteriorOrbit = new THREE.Spherical(181.7 * fit, this.controls.maxPolarAngle, Math.atan2(-.62, .78));
+    this.camera.position.copy(this.mode === '3d' ? new THREE.Vector3().setFromSpherical(exteriorOrbit).add(new THREE.Vector3(0, 27, 0)) : new THREE.Vector3(x, 50 * floorFit, 44 * floorFit + 3));
     this.controls.target.set(this.mode === '3d' ? 0 : x, this.mode === '3d' ? 27 : 0, this.mode === '3d' ? 0 : 3); this.controls.update();
     this.controls.enableDamping = true; this.controls.autoRotate = auto;
   }
@@ -533,7 +535,7 @@ export class BuildingScene {
     });
     return count;
   }
-  snapshot() { return { visibleTriangles: this.visibleTriangles(), sun: { preview: this.atmosphere.preview, strength: this.atmosphere.sunStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.sunStrength > 0, direction: this.atmosphere.sunDirection.toArray(), screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), originalProposal: this.originalProposal, proposalDetails: this.hospital.proposalDetails, mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && this.context.ready && !this.renderDirty }; }
+  snapshot() { return { moon: { strength: this.atmosphere.moonStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.moonStrength > 0, screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, visibleTriangles: this.visibleTriangles(), sun: { preview: this.atmosphere.preview, strength: this.atmosphere.sunStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.sunStrength > 0, direction: this.atmosphere.sunDirection.toArray(), screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), originalProposal: this.originalProposal, proposalDetails: this.hospital.proposalDetails, mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && this.context.ready && !this.renderDirty }; }
   dispose() {
     this.destroyed = true; cancelAnimationFrame(this.frameId); this.observer.disconnect(); this.controls.dispose(); this.disposables.forEach(fn => fn());
     this.clearFloor();

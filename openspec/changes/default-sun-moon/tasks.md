@@ -1,0 +1,4 @@
+- [x] Record default behavior, scenarios and rendering design.
+- [x] Implement default sun/moon and bilingual illustrative provenance.
+- [ ] Verify default rendered pixels/screenshots, spec/build and full harness.
+- [ ] Deploy, verify public site, update evidence and archive.

@@ -253,3 +253,9 @@ S1检查真实渲染太阳投影处的亮核像素，非DOM图标；检查预览
 真实公网 `?v=693b148` 的HTML为HTTP200，JS `index-CyrTDY7W.js`、CSS `index-CIaPz7Nv.css` 和Three块 `three-D759iadV.js` 与最终构建一致。实际公网生产验收 **1/1（33.7秒）** 通过，含原模型/周边/HDR和真实天气请求、真实指针旋转/全景/复位、13F设备/筛选与语言、太阳预览不改天气卡片、显式观察太阳、返回实时天气、生产无开发入口和无浏览器/资源错误。`sunlight-online.png`已实际检查，太阳圆盘、光晕和玻璃高光可见，天气/时间仍为真实深圳夜间数据，预览有明确非实时标签。
 
 OpenSpec已归档为 `2026-10-15-visible-sunlight`，building-visualization新增1项要求，归档后严格基线 **3/3通过**。后续文档与公网截图以skip-ci保存，运行版本保持693b148；4187开发预览保留，临时4188已关闭。
+
+## 2026-10-15 Default sun and moon
+
+The user clarified that celestial effects must appear immediately, without sunny-preview or observation actions. Default/reset exterior framing now includes the low illustrative sky direction; live day shows sunlight and a solar halo, night shows a cratered moon with cool fill. Weather attenuates the effect, without substituting weather readings or clock time. Sky placement and lunar phase are explicitly display design, not astronomical or true-north calibration. Existing optional sunny preview remains labeled non-live. Source geometry, original proposal choice and floor illumination are preserved.
+
+Initial acceptance: strict OpenSpec 4/4, project-prefix build passed; six solar/lunar UI cases passed in 40.0s, including default bright-core rendered-pixel assertions for desktop and 768/390 day/night, weather attenuation, live readings, floor/locale/pose and idle behavior. Actual default desktop sun/moon and phone moon screenshots were inspected, showing the celestial body unobscured above the original source buildings. Full-suite and deployment evidence will be recorded after completion.

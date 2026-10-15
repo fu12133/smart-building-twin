@@ -14,6 +14,7 @@ export class SceneAtmosphere {
   profile = { day: 0, cloud: 0, kind: 'clear', wet: false };
   readonly sunDirection = new THREE.Vector3(-.4, .8, .5).normalize();
   sunStrength = 0;
+  moonStrength = 0;
   preview = false;
   private canvas = document.createElement('canvas');
   private key = '';
@@ -42,20 +43,15 @@ export class SceneAtmosphere {
     const cloud = enabled && !preview ? Math.max(weather?.code === 3 ? .8 : 0, Math.round((weather?.cloud || 0) / 10) / 10) : 0;
     const kind = enabled && weather && !preview ? weatherKind(weather.code) : 'clear';
     const wet = enabled && !preview && !!weather && (weather.precipitation > 0 || ['rain', 'snow', 'storm'].includes(kind));
-    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);
-    const hour = Number(parts.find(p => p.type === 'hour')!.value) + Number(parts.find(p => p.type === 'minute')!.value) / 60;
-    const rise = weather?.sunrise, set = weather?.sunset;
-    const phase = Math.round(THREE.MathUtils.clamp(rise && set && set > rise && Math.abs(now.getTime() - rise) < 86400000 ? (now.getTime() - rise) / (set - rise) : (hour - 6) / 12, 0, 1) * 48) / 48;
-    const key = [enabled, preview, !!weather, day, cloud, kind, wet, enabled && !preview && day > 0 ? phase : 0].join('/');
+    const key = [enabled, preview, day, cloud, kind, wet].join('/');
     if (key === this.key) return false;
     this.key = key; this.profile = { day, cloud, kind, wet }; this.preview = preview;
-    // Illustrative east-to-west arc, not surveyed true north or a solar-analysis ephemeris.
-    if (preview) this.sunDirection.set(.62, .15, -.78).normalize();
-    else {
-      const azimuth = -.95 + phase * 1.9, elevation = .04 + Math.sin(phase * Math.PI) * 1.05;
-      this.sunDirection.set(Math.sin(azimuth) * Math.cos(elevation), Math.sin(elevation), -Math.cos(azimuth) * Math.cos(elevation));
-    }
-    this.sunStrength = day > 0 && (preview || !!weather) && !wet && kind !== 'fog' && cloud < .7 ? Math.max(.15, 1 - cloud * 1.2) : 0;
+    // Low illustrative sky placement keeps default day/night effects in view.
+    // It is not a surveyed solar direction, astronomical position or lunar phase.
+    this.sunDirection.set(.62, .15, -.78).normalize();
+    const transmission = Math.max(.24, 1 - cloud * .7 - (wet || kind === 'fog' ? .12 : 0));
+    this.sunStrength = enabled && day > 0 ? transmission : 0;
+    this.moonStrength = enabled && day === 0 ? transmission : 0;
     this.ready = true;
     this.rain.visible = wet && kind !== 'snow'; this.snow.visible = wet && kind === 'snow';
     this.drawSky(day, cloud, kind);
@@ -112,6 +108,29 @@ export class SceneAtmosphere {
         const disc = context.createRadialGradient(cx, y, 1, cx, y, 7);
         disc.addColorStop(0, '#fffef0'); disc.addColorStop(.75, warm ? '#fff1c7' : '#fff9e8'); disc.addColorStop(1, 'rgba(255,247,217,0)');
         context.globalAlpha = this.sunStrength; context.fillStyle = disc; context.fillRect(cx - 7, y - 7, 14, 14); context.globalAlpha = 1;
+      }
+    }
+    if (this.moonStrength > 0) {
+      const x = (Math.atan2(this.sunDirection.z, this.sunDirection.x) / (2 * Math.PI) + .5) * 2048;
+      const y = (.5 - Math.asin(this.sunDirection.y) / Math.PI) * 1024;
+      for (const offset of [-2048, 0, 2048]) {
+        const cx = x + offset;
+        const halo = context.createRadialGradient(cx, y, 8, cx, y, 90);
+        halo.addColorStop(0, `rgba(185,215,255,${.35 * this.moonStrength})`);
+        halo.addColorStop(.25, `rgba(148,193,245,${.13 * this.moonStrength})`);
+        halo.addColorStop(1, 'rgba(130,180,240,0)');
+        context.fillStyle = halo; context.fillRect(cx - 90, y - 90, 180, 180);
+        context.save(); context.globalAlpha = .55 + .45 * this.moonStrength;
+        context.beginPath(); context.arc(cx, y, 11, 0, Math.PI * 2); context.clip();
+        const disc = context.createRadialGradient(cx - 4, y - 4, 1, cx, y, 14);
+        disc.addColorStop(0, '#f4f5e7'); disc.addColorStop(.65, '#d8e1e3'); disc.addColorStop(1, '#8398ac');
+        context.fillStyle = disc; context.fillRect(cx - 12, y - 12, 24, 24);
+        // Deterministic lunar surface detail, explicitly a display design.
+        for (let i = 0; i < 19; i++) {
+          context.fillStyle = `rgba(91,112,133,${.08 + noise(i + 51) * .16})`;
+          context.beginPath(); context.arc(cx + (noise(i + 8) - .5) * 20, y + (noise(i + 23) - .5) * 20, .6 + noise(i + 39) * 2.4, 0, Math.PI * 2); context.fill();
+        }
+        context.restore();
       }
     }
     // WebGLCubeMaps caches equirectangular backgrounds by texture identity.

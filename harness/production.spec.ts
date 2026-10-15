@@ -104,6 +104,11 @@ test('production assets and model interactions work under repository URL', async
   await page.waitForTimeout(1200); // Let ECharts' entrance animation finish before capturing evidence.
   mkdirSync('artifacts/harness', { recursive: true });
   await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/production-online.png' : 'artifacts/harness/production-local.png' });
+  await page.getByRole('button', { name: '复位视角', exact: true }).click();
+  await expect(page.locator('.celestial-state')).toHaveText('白天阳光 · 夜间月亮（展示）');
+  await expect(page.getByRole('button', { name: '开启日照预览', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/default-celestial-online.png' : 'artifacts/harness/default-celestial-production.png' });
   const originalCanvas = await canvas.elementHandle();
   await page.getByRole('button', { name: 'English', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Smart Hospital Management', exact: true })).toBeVisible();
