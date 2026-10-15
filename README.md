@@ -4,7 +4,7 @@
 
 ## 在线使用
 
-[打开原创医院方案](https://guangfubill-crypto.github.io/smart-building-twin/)。访问者无需安装 Node.js，使用现代浏览器即可操作模型。
+[打开医院数字孪生（中/英）](https://guangfubill-crypto.github.io/smart-building-twin/)。访问者无需安装 Node.js，使用现代浏览器即可操作模型。
 
 源码仓库：[guangfubill-crypto/smart-building-twin](https://github.com/guangfubill-crypto/smart-building-twin)。
 

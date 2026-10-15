@@ -6,5 +6,5 @@
 
 ## 2. 验证与发布
 - [x] 严格OpenSpec、生产构建、完整harness与实际中英文截图。
-- [ ] 更新已授权GitHub Pages并通过公网生产验收。
-- [ ] 更新verification/README/知识记录并归档变更。
+- [x] 更新已授权GitHub Pages并通过公网生产验收。
+- [x] 更新verification/README/知识记录并归档变更。
