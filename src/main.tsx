@@ -9,14 +9,17 @@ import './style.css';
 import { deviceSystems, DeviceFilter } from './deviceSystems';
 import { daylight, isFresh, useShenzhenWeather, weatherName } from './weather';
 import { WeatherWidget } from './WeatherWidget';
+import { LanguageProvider, localize, localeName, useLanguage } from './i18n';
 
 declare global { interface Window { __BUILDING_HARNESS__?: () => ReturnType<BuildingScene['snapshot']>; } }
 const nav = [{ id: 'overview', icon: LayoutDashboard, name: '院区总览' }, { id: 'equipment', icon: Cpu, name: '设备物联' }, { id: 'access', icon: Users, name: '通行统计' }, { id: 'energy', icon: Zap, name: '能源分析' }] as const;
 function Panel({ title, icon: Icon, extra, children, className = '' }: { title: string; icon: typeof Activity; extra?: React.ReactNode; children: React.ReactNode; className?: string }) {
-  return <section className={'panel ' + className}><div className="panel-title"><Icon size={15} /><h2>{title}</h2><span className="panel-extra">{extra || '今日'}</span></div>{children}</section>;
+  const { t } = useLanguage();
+  return <section className={'panel ' + className}><div className="panel-title"><Icon size={15} /><h2>{title}</h2><span className="panel-extra">{extra || t('今日')}</span></div>{children}</section>;
 }
 
 function App() {
+  const { language, setLanguage, t } = useLanguage();
   const host = useRef<HTMLDivElement>(null);
   const floorRail = useRef<HTMLDivElement>(null);
   const engine = useRef<BuildingScene | null>(null);
@@ -42,7 +45,7 @@ function App() {
   const [weatherEffects, setWeatherEffects] = useState(true);
   const weatherMinute = Math.floor(time.getTime() / 60000);
   const freshWeather = weather.reading && isFresh(weather.reading, time.getTime()) ? weather.reading : undefined;
-  const sunLevel = daylight(freshWeather, time), timePeriod = sunLevel > .35 ? '日间' : sunLevel > 0 ? '晨昏' : '夜景';
+  const sunLevel = daylight(freshWeather, time), timePeriod = t(sunLevel > .35 ? '日间' : sunLevel > 0 ? '晨昏' : '夜景');
   const current = buildings.find(b => b.id === building)!;
   const layout = getFloorLayout(building, floor), devices = layout.devices;
   const selectedDevice = devices.find(d => d.id === device);
@@ -55,7 +58,7 @@ function App() {
   useEffect(() => {
     let scene: BuildingScene | undefined;
     try {
-      scene = new BuildingScene(host.current!, { onSelect: id => { setBuilding(id); setDevice(null); }, onDevice: setDevice, onError: setError, onModelLoaded: () => setHospitalReady(true), onContextLoaded: () => setContextReady(true) });
+      scene = new BuildingScene(host.current!, { language, onSelect: id => { setBuilding(id); setDevice(null); }, onDevice: setDevice, onError: setError, onModelLoaded: () => setHospitalReady(true), onContextLoaded: () => setContextReady(true) });
       engine.current = scene;
       if (import.meta.env.DEV) window.__BUILDING_HARNESS__ = () => scene!.snapshot();
     } catch { setError('无法启动三维渲染，请使用支持 WebGL 的浏览器并开启硬件加速。'); }
@@ -74,6 +77,7 @@ function App() {
   useEffect(() => { engine.current?.setAtmosphere(weather.reading, new Date(), weatherEffects); }, [weather.reading, weatherEffects, weatherMinute]);
   useEffect(() => { engine.current?.setDeviceFilter(deviceFilter); }, [deviceFilter]);
   useEffect(() => { engine.current?.setSelectedDevice(device); }, [device]);
+  useEffect(() => { engine.current?.setLanguage(language); }, [language]);
   useEffect(() => { const timer = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(timer); }, []);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 3500); return () => clearTimeout(timer); }, [toast]);
   const changeView = (id: View) => { setView(id); setDevice(null); };
@@ -88,8 +92,8 @@ function App() {
   };
   const fullscreen = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch { setToast('当前预览不支持全屏，可在独立浏览器中打开。'); } };
   const metrics = view === 'energy' ? [{ name: '今日用电量', value: '8,462', unit: 'kWh', trend: '较昨日 −8.2%', icon: Zap }, { name: '今日用水量', value: '126.8', unit: 'm³', trend: '较昨日 −4.6%', icon: Activity }, { name: '碳排放量', value: '4.82', unit: 't', trend: '较昨日 −6.1%', icon: Leaf }, { name: '节能率', value: '18.6', unit: '%', trend: '本月累计', icon: ShieldCheck }] : view === 'access' ? [{ name: '今日入院区', value: '4,958', unit: '人次', trend: '较昨日 +12.6%', icon: Users }, { name: '今日离院区', value: '4,322', unit: '人次', trend: '较昨日 +8.2%', icon: ArrowDown }, { name: '在院区人数', value: '636', unit: '人', trend: '院区实时统计', icon: Building2 }, { name: '今日访客', value: '279', unit: '人次', trend: '预约到访 92.1%', icon: ScanLine }] : [{ name: '接入设备', value: '1,246', unit: '台', trend: '覆盖 12 个子系统', icon: Cpu }, { name: '设备在线率', value: '98.6', unit: '%', trend: '在线 1,229 台', icon: Radio }, { name: '今日通行', value: '4,958', unit: '人次', trend: '较昨日 +12.6%', icon: Users }, { name: '今日能耗', value: '8,462', unit: 'kWh', trend: '较昨日 −8.2%', icon: Zap }];
-  return <div className={'app-shell ' + (mode === 'floor' ? 'floor-mode' : '')}>
-    <header className="header"><div className="brand"><div className="brand-symbol"><Building2 size={26} /></div><div><strong>云境<span> YUNJING</span></strong><small>智慧空间 · 数字孪生</small></div></div><div className="header-title"><span>医院运维 · 数字孪生</span><h1>智慧医院综合管理平台</h1></div><div className="header-actions"><WeatherWidget weather={weather} now={time}/><div className="clock" aria-label="北京时间"><strong>{time.toLocaleTimeString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })}</strong><small>{time.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })} <span>{time.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai', weekday: 'long' })}</span></small></div><button className="icon-button" aria-label="操作帮助" onClick={() => setHelp(true)}><CircleHelp size={18}/></button><button className="icon-button" aria-label="全屏显示" onClick={fullscreen}><Expand size={18}/></button></div></header>
+  return localize(<div className={'app-shell ' + (mode === 'floor' ? 'floor-mode' : '')}>
+    <header className="header"><div className="brand"><div className="brand-symbol"><Building2 size={26} /></div><div><strong>云境<span> YUNJING</span></strong><small>智慧空间 · 数字孪生</small></div></div><div className="header-title"><span>医院运维 · 数字孪生</span><h1>智慧医院综合管理平台</h1></div><div className="header-actions"><div className="language-switch" role="group" aria-label="选择语言"><button lang="zh-CN" aria-pressed={language === 'zh'} onClick={() => setLanguage('zh')}>中文</button><button lang="en" aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>English</button></div><WeatherWidget weather={weather} now={time}/><div className="clock" aria-label="北京时间"><strong>{time.toLocaleTimeString(localeName(language), { timeZone: 'Asia/Shanghai', hour12: false })}</strong><small>{time.toLocaleDateString(localeName(language), { timeZone: 'Asia/Shanghai' })} <span>{time.toLocaleDateString(localeName(language), { timeZone: 'Asia/Shanghai', weekday: 'long' })}</span></small></div><button className="icon-button" aria-label="操作帮助" onClick={() => setHelp(true)}><CircleHelp size={18}/></button><button className="icon-button" aria-label="全屏显示" onClick={fullscreen}><Expand size={18}/></button></div></header>
     <aside className="nav-rail"><div className="rail-top"><span className="rail-dot"/>智慧院区</div><nav aria-label="主导航">{nav.map(({ id, icon: Icon, name }) => <button key={id} className={view === id ? 'nav-item active' : 'nav-item'} aria-pressed={view === id} onClick={() => changeView(id)}><Icon size={22}/><span>{name}</span>{view === id && <i/>}</button>)}</nav><div className="rail-bottom"><ShieldCheck size={20}/><span>管理中心</span><div className="avatar">YK</div></div></aside>
     <main>
       <div className="workspace-heading"><div className="breadcrumb">云境智慧院区 <ChevronRight size={12}/><b>{viewNames[view]}</b></div><div className="data-source"><i/>演示数据<span className="source-divider"/>{mode === 'floor' ? '内部布局 · 方案示意' : originalProposal ? '原创医院 · 白模深化方案' : '项目白模 · 主体及周边'}</div></div>
@@ -107,7 +111,7 @@ function App() {
           <div className="scene-top"><div><span className="eyebrow">医院数字孪生</span><h2>{mode === '3d' ? '院区数字孪生' : current.id + '区 · ' + floorName(floor) + ' 电子地图'}</h2></div><div className="mode-switch"><button aria-pressed={mode === '3d'} className={mode === '3d' ? 'active' : ''} onClick={() => setMode('3d')}><Move3D size={13}/>3D 院区</button><button aria-pressed={mode === 'floor'} className={mode === 'floor' ? 'active' : ''} onClick={() => setMode('floor')}><Layers3 size={13}/>2.5D 楼层</button></div></div>
           <div className="scene-host" ref={host} data-testid="scene-host"/>
           {error && <div className="scene-error" role="alert"><Building2 size={32}/><h3>三维场景暂不可用</h3><p>{error}</p><button onClick={() => location.reload()}>重新加载</button></div>}
-          <div className="scene-info"><span className="model-state"><i/> {mode === '3d' ? (hospitalReady ? '医院模型已加载' : '医院模型加载中') : '示意楼层已加载'}</span><span>{mode === '3d' ? originalProposal ? '原创现代医院 / 材质与灯光方案 · 未核实' : '源白模形体 / 材质与灯光方案' : floorScope(building, floor)}</span>{mode === '3d' && <span className="context-state">{contextReady ? '白模周边已加载 · 可查看完整白模' : '白模周边加载中'}</span>}{mode === '3d' && <span className="atmosphere-state" aria-label="外景天气效果">深圳 · {weatherEffects ? timePeriod + (freshWeather ? ' · ' + weatherName(freshWeather.code) : ' · 天气待更新') : '展示灯光'}</span>}{mode === 'floor' && <span aria-label="楼层布局说明">{layout.title} · {layout.rooms.length} 个分区 · 方案示意</span>}</div>
+          <div className="scene-info"><span className="model-state"><i/> {mode === '3d' ? (hospitalReady ? '医院模型已加载' : '医院模型加载中') : '示意楼层已加载'}</span><span>{mode === '3d' ? originalProposal ? '原创现代医院 / 材质与灯光方案 · 未核实' : '源白模形体 / 材质与灯光方案' : floorScope(building, floor)}</span>{mode === '3d' && <span className="context-state">{contextReady ? '白模周边已加载 · 可查看完整白模' : '白模周边加载中'}</span>}{mode === '3d' && <span className="atmosphere-state" aria-label="外景天气效果">深圳 · {weatherEffects ? timePeriod + (freshWeather ? ' · ' + t(weatherName(freshWeather.code)) : ' · 天气待更新') : '展示灯光'}</span>}{mode === 'floor' && <span aria-label="楼层布局说明">{layout.title} · {layout.rooms.length} 个分区 · 方案示意</span>}</div>
           {mode === 'floor' && <nav className="floor-rail" aria-label="楼层导航"><span>{building}区</span><div ref={floorRail}>{floors.map(f => <button key={f} aria-label={'切换到 ' + floorName(f)} aria-pressed={floor === f} className={floor === f ? 'active' : ''} title={floorScope(building, f)} onClick={() => setFloor(f)}>{floorName(f)}{building === 'A' && [13, 14].includes(f) && <small>保留</small>}</button>)}</div></nav>}
           <div className="scene-controls"><button aria-label="放大模型" title="放大" onClick={() => engine.current?.zoom(0.85)}><Plus size={17}/></button><button aria-label="缩小模型" title="缩小" onClick={() => engine.current?.zoom(1.15)}><Minus size={17}/></button><div className="control-divider"/><button aria-label="复位视角" title="复位视角" onClick={() => engine.current?.reset()}><RotateCcw size={16}/></button>{mode === '3d' && <button aria-label="查看完整白模" title="查看完整白模" disabled={!contextReady} onClick={() => engine.current?.showContext()}><Maximize2 size={16}/></button>}<button aria-label="图层设置" title="图层设置" aria-expanded={layersOpen} className={layersOpen ? 'active' : ''} onClick={() => setLayersOpen(!layersOpen)}><Layers3 size={17}/></button></div>
           {layersOpen && <div className="layer-popover"><strong>场景图层</strong><label><input type="checkbox" checked={originalProposal} onChange={e => setOriginalProposal(e.target.checked)}/>原创医院方案</label><label><input type="checkbox" checked={deviceLayer} onChange={e => setDeviceLayer(e.target.checked)}/>设备点位</label><label><input type="checkbox" checked={contextLayer} onChange={e => setContextLayer(e.target.checked)}/>周边建筑</label><label><input type="checkbox" checked={weatherEffects} onChange={e => setWeatherEffects(e.target.checked)}/>天气效果</label></div>}
@@ -131,7 +135,7 @@ function App() {
     </main>
     {help && <div className="modal-backdrop" onClick={() => setHelp(false)}><section className="help-dialog" role="dialog" aria-modal="true" aria-label="模型操作帮助" onClick={e => e.stopPropagation()}><button className="dialog-close" aria-label="关闭帮助" onClick={() => setHelp(false)}><X size={19}/></button><Move3D size={31}/><h2>探索你的数字院区</h2><p>模型由真实三维几何组成，可以从不同角度观察。</p><div className="help-grid"><span>左键拖拽</span><b>旋转模型</b><span>滚轮 / 双指捏合</span><b>缩放场景</b><span>右键拖拽 / 双指拖动</span><b>平移视角</b><span>方向键 / + −</span><b>旋转与缩放</b><span>点击楼栋标签</span><b>选择楼宇</b><span>切换 2.5D 楼层</span><b>查看空间和设备</b></div><p className="help-note">形体来自你提供的项目白模 DWG，塔楼与围合裙房为同一建筑。按资料塔楼结构高度 69.5 米等比校准；DWG单位头标米，但结构高度为205坐标单位，与资料不一致，当前不是已核准的现场尺寸。白模包围盒约 72.6×52.3 米，与资料 70×38 米有差异，未强行拉伸。资料裙房高 26.7 米、改造面积 28,426 m²、总投资 2.87 亿元。地上 18 层＋地下 2 层，13、14 层保留原功能。地下仅部分改造，地下形体与所有楼层布局尚未核实，为示意。各分区各层分别提供独立的内部方案示意，采用灰色楼板、白色房间隔墙、门洞、核心筒与楼梯；塔楼和裙房的核心筒各自上下对齐，外围隔间与走廊按层变化；设备分类可筛选点位，右侧楼层条可切换。实际室内图纸提供后再校准；主体、裙房、周边建筑和场地来自同一白模，保留源坐标关系。默认原创医院方案加入幕墙框、遮阳翼、层间带和玻璃门厅雨棚，为新设计而非已核实竣工形体；在图层设置关闭“原创医院方案”可回看源形体与原材质方案。没有新增医院名称或替换原城市和场地。玻璃、石材和场地材质仍为方案，尚无实际照片核对；指标未接入实时数据。可点击“查看完整白模”观察更大范围，复位返回主体。</p><button className="primary-button" onClick={() => setHelp(false)}>开始探索<ArrowUpRight size={15}/></button></section></div>}
     {toast && <div className="toast" role="status">{toast}</div>}
-  </div>;
+  </div>, language);
 }
-createRoot(document.getElementById('root')!).render(<App/>);
+createRoot(document.getElementById('root')!).render(<LanguageProvider><App/></LanguageProvider>);
 

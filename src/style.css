@@ -79,3 +79,28 @@ footer{position:relative;z-index:3;height:35px;color:#8eacbe;pointer-events:none
 @media(max-width:1150px){.header-title h1{font-size:19px;letter-spacing:2px}.header-actions{gap:8px}.brand{min-width:190px}}
 @media(max-width:1050px){.header-title{display:none}}
 @media(max-width:760px){.header{padding:0 12px}.brand{min-width:0;gap:7px}.brand-symbol{width:31px;height:34px}.brand-symbol svg{width:22px}.brand strong{font-size:15px;letter-spacing:1px}.brand strong span{display:none}.brand small{font-size:7px;letter-spacing:0}.header-actions{gap:4px}.clock strong{font-size:14px;letter-spacing:1px}.clock small span{display:none}.weather-button{padding:4px 7px;gap:5px}.weather-button strong{font-size:11px}.weather-button small{font-size:8px}.weather-button>svg{width:16px}.weather-popover{top:66px;right:12px;width:min(310px,calc(100vw - 24px))}.scene-info{max-width:calc(100% - 80px)}.scene-info .atmosphere-state{font-size:8px}}
+.language-switch{display:flex;align-items:center;gap:2px;padding:3px;border:1px solid #315567;border-radius:5px;background:#082031;flex-shrink:0}
+.language-switch button{background:transparent;border:0;color:#95afc1;font-size:10px;padding:5px 7px;border-radius:3px;cursor:pointer;min-height:27px}
+.language-switch button[aria-pressed=true]{background:#164958;color:#77f1de}.language-switch button:focus-visible{outline:2px solid #77f1de;outline-offset:2px}
+html[lang=en] .brand strong span{display:none}html[lang=en] .header-title h1{font-size:23px;letter-spacing:1px}
+html[lang=en] .nav-item span{font-size:10px}html[lang=en] .scene-info{max-width:calc(100% - 570px);line-height:1.5}
+html[lang=en] .building-name strong{font-size:13px}html[lang=en] .small-stats{gap:12px}html[lang=en] .small-stats span{font-size:8px}
+html[lang=en] .system-card-title strong{font-size:11px}html[lang=en] .system-card dl{font-size:8px}html[lang=en] .system-note{line-height:1.6}
+html[lang=en] .building-selector select{max-width:165px}html[lang=en] .metric-body>span{font-size:11px}
+@media(max-width:1050px){html[lang=en] .scene-info{max-width:calc(100% - 100px)}html[lang=en] .header-title h1{font-size:18px}}
+@media(max-width:760px){.header-actions{flex-wrap:wrap;justify-content:flex-end;row-gap:2px}.language-switch{order:-1;padding:1px}.language-switch button{font-size:9px;padding:3px 5px;min-height:24px}html[lang=en] .brand{max-width:92px}html[lang=en] .brand strong{font-size:13px}html[lang=en] .brand small{font-size:6px}html[lang=en] .clock small{font-size:7px}html[lang=en] .metric-body>span{font-size:9px}html[lang=en] .scene-info{font-size:8px;max-width:calc(100% - 70px)}html[lang=en] .building-selector{gap:6px}html[lang=en] .building-selector select{max-width:110px}html[lang=en] .floor-action{font-size:8px}html[lang=en] .scene-top h2{max-width:135px}html[lang=en] .mode-switch button{font-size:8px}html[lang=en] .help-grid{grid-template-columns:1.2fr 1fr}html[lang=en] .device-popup{width:min(270px,calc(100% - 30px))}}
+@media(max-width:760px){
+ .header{height:100px;display:grid;grid-template-columns:100px minmax(0,1fr) 28px 28px;grid-template-rows:48px 42px;column-gap:5px;padding:0 12px}
+ .header .brand,html[lang=en] .header .brand{grid-column:1/3;grid-row:1;max-width:none;justify-self:start}.header-actions{display:contents}
+ .header .clock{grid-column:2/5;grid-row:1;justify-self:end}.header .language-switch{grid-column:1;grid-row:2;justify-self:start}
+ .header .weather-widget{grid-column:2;grid-row:2;justify-self:start}.header .weather-button{padding:3px 0;gap:4px}.header .weather-button strong{font-size:10px}.header .weather-button small{font-size:7px}
+ .header .icon-button{grid-column:3;grid-row:2;padding:4px}.header .icon-button:last-child{grid-column:4}.weather-popover{top:102px}
+ html[lang=en] .workspace-heading{height:auto;min-height:46px;align-items:flex-start;flex-direction:column;gap:6px;padding:10px 0}
+ html[lang=en] .data-source{font-size:8px;flex-wrap:wrap;letter-spacing:0}
+}
+html[lang=en] .building-details>div{flex-wrap:wrap;gap:3px 7px}html[lang=en] .building-details>div>span{font-size:9px}
+html[lang=en] .floor-rail small{font-size:6px;letter-spacing:-.3px}
+html[lang=en] .building-info .building-details{gap:10px 12px}
+html[lang=en] .building-info .building-details>div{flex-wrap:nowrap;gap:3px}
+html[lang=en] .building-info .building-details small{display:none}
+@media(min-width:1051px){html[lang=en] .building-info .building-details{row-gap:6px}html[lang=en] .building-info .inspect-floor{margin-bottom:4px}html[lang=en] .building-info .project-scope{padding:1px 0}}

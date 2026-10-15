@@ -8,6 +8,8 @@
 
 源码仓库：[guangfubill-crypto/smart-building-twin](https://github.com/guangfubill-crypto/smart-building-twin)。
 
+右上角提供“中文 / English”切换，默认中文并记住选择。导航、图表、场景标签、楼层设备、天气和帮助支持英文；切换保留当前模型视角、楼层和设备详情。两种语言都显示Asia/Shanghai时间，真实源文件名和设备ID不翻译。
+
 ## 启动
 
 ```powershell
@@ -84,6 +86,7 @@ A区1–18/B1/B2、B区1–6/B1/B2共28个楼层上下文各有独立的方案�
 ## 文件分工
 
 - `src/scene.ts`：相机、旋转控制、拾取、图层和 GPU 资源清理。
+- `src/i18n.tsx`：中英词典、语言偏好及保持React节点身份的文本本地化；场景使用setLanguage原位更新标签。
 - `src/floorLayouts.ts`：按分区/楼层解析唯一方案，包括楼板、核心筒、房间/门洞和设备位置；场景与界面共同使用。
 - `src/floorGeometry.ts`：将当前方案生成灰色楼板、白色隔墙/门洞与核心筒、楼梯的实体几何。
 - `src/deviceSystems.ts`：六类设备名称与图标；分类数量来自楼层示意点位。

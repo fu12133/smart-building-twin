@@ -104,6 +104,19 @@ test('production assets and model interactions work under repository URL', async
   await page.waitForTimeout(1200); // Let ECharts' entrance animation finish before capturing evidence.
   mkdirSync('artifacts/harness', { recursive: true });
   await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/production-online.png' : 'artifacts/harness/production-local.png' });
+  const originalCanvas = await canvas.elementHandle();
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Smart Hospital Management', exact: true })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  expect(await originalCanvas!.evaluate(element => element.isConnected), 'Language switch retains the actual renderer').toBe(true);
+  await expect(page.getByLabel('Select floor', { exact: true })).toHaveValue('13');
+  await expect(page.getByLabel('Beijing time (UTC+8)', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Shenzhen weather', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Shenzhen weather details' })).toContainText('Not onsite measurements');
+  await page.getByRole('button', { name: 'Close weather details' }).click();
+  await page.screenshot({ path: process.env.PRODUCTION_URL ? 'artifacts/harness/language-en-online.png' : 'artifacts/harness/language-en-production.png' });
+  await page.getByRole('button', { name: '中文', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '智慧医院综合管理平台' })).toBeVisible();
   expect(errors, 'Production console errors').toEqual([]);
   expect(failures, 'Production asset HTTP failures').toEqual([]);
 });

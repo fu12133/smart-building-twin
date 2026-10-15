@@ -19,8 +19,9 @@ import { createFloorGeometry } from './floorGeometry';
 import { deviceSystems, DeviceFilter } from './deviceSystems';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Language, translate } from './i18n';
 
-type Options = { onSelect: (id: string) => void; onDevice: (id: string) => void; onError: (error: string) => void; onModelLoaded: () => void; onContextLoaded: () => void };
+type Options = { language?: Language; onSelect: (id: string) => void; onDevice: (id: string) => void; onError: (error: string) => void; onModelLoaded: () => void; onContextLoaded: () => void };
 export class BuildingScene {
   readonly renderer: THREE.WebGLRenderer;
   readonly camera = new THREE.PerspectiveCamera(40, 1, 0.1, 1200);
@@ -50,7 +51,8 @@ export class BuildingScene {
   private savedPosition = new THREE.Vector3();
   private savedTarget = new THREE.Vector3();
   private pointerDown = new THREE.Vector2();
-  private labelNodes: { element: HTMLButtonElement; position: THREE.Vector3; floorOnly: boolean }[] = [];
+  private labelNodes: { element: HTMLButtonElement; position: THREE.Vector3; floorOnly: boolean; sourceText: string }[] = [];
+  private language: Language = 'zh';
   private labels: HTMLDivElement;
   private disposables: (() => void)[] = [];
   private floorDisposables: (() => void)[] = [];
@@ -77,6 +79,7 @@ export class BuildingScene {
   private originalProposal = true;
 
   constructor(private host: HTMLDivElement, private options: Options) {
+    this.language = options.language ?? 'zh';
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.setClearColor(0x081b2d);
@@ -125,7 +128,7 @@ export class BuildingScene {
     // Include scene and postprocessing triangles in the read-only verification counter.
     this.renderer.info.autoReset = false;
     const canvas = this.renderer.domElement;
-    canvas.setAttribute('aria-label', '可旋转的楼宇三维模型');
+    canvas.setAttribute('aria-label', translate('可旋转的楼宇三维模型', this.language));
     canvas.tabIndex = 0;
     host.appendChild(canvas);
     this.labels = document.createElement('div');
@@ -284,10 +287,10 @@ export class BuildingScene {
     }
   }
   private addLabel(text: string, position: THREE.Vector3, floorOnly: boolean, action: () => void, className: string) {
-    const element = document.createElement('button'); element.textContent = text; element.className = className;
-    element.setAttribute('aria-label', floorOnly ? '选择设备 ' + text : '选择' + text.split(' · ')[0]);
+    const element = document.createElement('button'); element.textContent = translate(text, this.language); element.className = className;
+    element.setAttribute('aria-label', translate(floorOnly ? '选择设备 ' + text : '选择' + text.split(' · ')[0], this.language));
     element.addEventListener('click', action); (floorOnly ? this.floorDisposables : this.disposables).push(() => element.removeEventListener('click', action));
-    this.labels.appendChild(element); this.labelNodes.push({ element, position, floorOnly });
+    this.labels.appendChild(element); this.labelNodes.push({ element, position, floorOnly, sourceText: text });
   }
   private createFloor() {
     this.clearFloor();
@@ -299,7 +302,7 @@ export class BuildingScene {
       pin.userData.device = d.id; pin.userData.type = d.type; this.floorMap.add(pin);
       this.addLabel(d.name, new THREE.Vector3(d.x, 4.4, d.z), true, () => this.options.onDevice(d.id), 'device-label device-pin ' + (d.status === '告警' ? 'warning' : ''));
       const element = this.labelNodes[this.labelNodes.length - 1].element;
-      element.dataset.type = d.type; element.dataset.device = d.id; element.title = d.name;
+      element.dataset.type = d.type; element.dataset.device = d.id; element.title = translate(d.name, this.language);
       element.textContent = '';
       const root = createRoot(element), Icon = deviceSystems.find(system => system.type === d.type)!.icon;
       root.render(createElement(Icon, { size: 21, strokeWidth: 1.8, 'aria-hidden': true }));
@@ -367,6 +370,15 @@ export class BuildingScene {
   setProposal(enabled: boolean) {
     this.originalProposal = enabled; this.hospital.setProposal(enabled);
     this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
+  }
+  setLanguage(language: Language) {
+    this.language = language;
+    this.renderer.domElement.setAttribute('aria-label', translate('可旋转的楼宇三维模型', language));
+    for (const label of this.labelNodes) {
+      if (!label.floorOnly) label.element.textContent = translate(label.sourceText, language);
+      label.element.title = translate(label.sourceText, language);
+      label.element.setAttribute('aria-label', translate(label.floorOnly ? '选择设备 ' + label.sourceText : '选择' + label.sourceText.split(' · ')[0], language));
+    }
   }
   setDeviceFilter(filter: DeviceFilter) { this.deviceFilter = filter; this.updateDeviceVisibility(); }
   private updateDeviceVisibility() {
