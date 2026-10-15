@@ -100,5 +100,8 @@ for (const width of [768, 390]) test(`S3: sunny preview controls remain accessib
   await expect(page.getByRole('button', { name: 'End sunlight preview', exact: true })).toBeInViewport();
   await expect(page.getByLabel('Exterior weather effects', { exact: true })).toContainText('Not live weather');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'View the sun', exact: true }).click(); await settled(page);
+  const solarPoint = (await state(page)).sun.screen;
+  expect(Math.abs(solarPoint[0])).toBeLessThan(.9); expect(Math.abs(solarPoint[1])).toBeLessThan(.9);
   await page.screenshot({ path: `artifacts/harness/sun-preview-${width}.png`, fullPage: true });
 });

@@ -111,3 +111,4 @@ html[lang=en] .building-info .building-details small{display:none}
 /* Keep scene labels readable against the bright daytime sky without covering the model. */
 .scene-top h2,.scene-info,.scene-top .eyebrow{text-shadow:0 1px 2px #061827,0 0 7px #061827}
 .scene-info{color:#c9e0ed}.scene-info .atmosphere-state{color:#d5e9f2!important}
+@media(max-width:760px){.app-shell:not(.floor-mode) .scene-info{top:140px}}

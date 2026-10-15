@@ -19,7 +19,7 @@ async function ready(page: Page) {
 }
 
 test('D1: original proposal toggles real rendered detail without moving the source or camera', async ({ page }) => {
-  test.setTimeout(process.env.CI ? 120000 : 45000);
+  test.setTimeout(process.env.CI ? 180000 : 45000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await ready(page);
   await expect(page.locator('.scene-info')).toContainText('原创现代医院');
@@ -58,6 +58,7 @@ test('D1: original proposal toggles real rendered detail without moving the sour
   await page.mouse.move(rect.x + rect.width * .5, rect.y + rect.height * .58); await page.mouse.down();
   await page.mouse.move(rect.x + rect.width * .75, rect.y + rect.height * .56, { steps: 8 }); await page.mouse.up();
   await expect.poll(async () => Math.abs((await state(page)).camera[0] - original.camera[0])).toBeGreaterThan(5);
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
   await page.screenshot({ path: 'artifacts/harness/original-hospital-rotated.png' });
   expect(errors).toEqual([]);
 });

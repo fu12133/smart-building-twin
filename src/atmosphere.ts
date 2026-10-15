@@ -8,6 +8,9 @@ export class SceneAtmosphere {
   sky: THREE.CanvasTexture;
   ready = false;
   environment?: THREE.WebGLRenderTarget;
+  private backgroundTarget?: THREE.WebGLCubeRenderTarget;
+  private reflectionCanvas?: HTMLCanvasElement;
+  get background() { return this.backgroundTarget?.texture ?? this.sky; }
   profile = { day: 0, cloud: 0, kind: 'clear', wet: false };
   readonly sunDirection = new THREE.Vector3(-.4, .8, .5).normalize();
   sunStrength = 0;
@@ -20,8 +23,12 @@ export class SceneAtmosphere {
   private positions = new Float32Array(420 * 6);
   private lastTick = 0;
 
-  constructor(private renderer: THREE.WebGLRenderer, private animationFPS = 24) {
+  constructor(private renderer: THREE.WebGLRenderer, private animationFPS = 24, private softwareGPU = false) {
     this.canvas.width = 2048; this.canvas.height = 1024;
+    if (softwareGPU) {
+      this.reflectionCanvas = document.createElement('canvas');
+      this.reflectionCanvas.width = 1024; this.reflectionCanvas.height = 512;
+    }
     this.sky = this.skyTexture();
     this.geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
     this.rain = new THREE.LineSegments(this.geometry, new THREE.LineBasicMaterial({ color: 0xbadcf1, transparent: true, opacity: .3, depthWrite: false }));
@@ -52,10 +59,22 @@ export class SceneAtmosphere {
     this.ready = true;
     this.rain.visible = wet && kind !== 'snow'; this.snow.visible = wet && kind === 'snow';
     this.drawSky(day, cloud, kind);
+    this.backgroundTarget?.dispose(); this.backgroundTarget = undefined;
+    if (enabled && this.softwareGPU) {
+      // Keep the 2K painted sun, with a bounded cube conversion on software renderers.
+      this.backgroundTarget = new THREE.WebGLCubeRenderTarget(512);
+      this.backgroundTarget.fromEquirectangularTexture(this.renderer, this.sky);
+    }
     this.environment?.dispose(); this.environment = undefined;
     if (enabled && day > 0) {
       const pmrem = new THREE.PMREMGenerator(this.renderer);
-      this.environment = pmrem.fromEquirectangular(this.sky); pmrem.dispose();
+      let input = this.sky;
+      if (this.reflectionCanvas) {
+        this.reflectionCanvas.getContext('2d')!.drawImage(this.canvas, 0, 0, 1024, 512);
+        input = this.skyTexture(this.reflectionCanvas);
+      }
+      try { this.environment = pmrem.fromEquirectangular(input); }
+      finally { if (input !== this.sky) input.dispose(); pmrem.dispose(); }
     }
     this.tick(0, true);
     return true;
@@ -99,8 +118,8 @@ export class SceneAtmosphere {
     // Replace/dispose the previous texture so a new weather profile cannot retain yesterday's sky.
     this.sky.dispose(); this.sky = this.skyTexture();
   }
-  private skyTexture() {
-    const texture = new THREE.CanvasTexture(this.canvas); texture.colorSpace = THREE.SRGBColorSpace;
+  private skyTexture(canvas = this.canvas) {
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
     texture.mapping = THREE.EquirectangularReflectionMapping; return texture;
   }
   tick(time: number, force = false) {
@@ -117,6 +136,6 @@ export class SceneAtmosphere {
   dispose() {
     this.group.removeFromParent(); this.group.clear();
     this.geometry.dispose(); (this.rain.material as THREE.Material).dispose(); (this.snow.material as THREE.Material).dispose();
-    this.environment?.dispose(); this.sky.dispose();
+    this.environment?.dispose(); this.backgroundTarget?.dispose(); this.sky.dispose();
   }
 }

@@ -135,7 +135,7 @@ export class BuildingScene {
     this.labels.className = 'scene-labels';
     host.appendChild(this.labels);
     this.scene.fog = new THREE.FogExp2(0x102f4c, 0.0028);
-    this.atmosphere = new SceneAtmosphere(this.renderer, software ? 1 : 24);
+    this.atmosphere = new SceneAtmosphere(this.renderer, software ? 1 : 24, !!software);
     const ambient = new THREE.HemisphereLight(0x9dc4e5, 0x25251c, .28);
     this.scene.add(ambient);
     const key = new THREE.DirectionalLight(0xffe8c1, .75);
@@ -279,7 +279,7 @@ export class BuildingScene {
     this.bloom.strength = mode === '3d' ? THREE.MathUtils.lerp(.3, .12, day) : .14;
     this.bloom.radius = mode === '3d' ? .32 : .2;
     this.bloom.threshold = mode === '3d' ? THREE.MathUtils.lerp(1.15, 1.65, day) : 1.65;
-    this.scene.background = mode === 'floor' ? this.floorBackground : this.weatherEnabled && this.atmosphere.ready ? this.atmosphere.sky : this.exteriorBackground;
+    this.scene.background = mode === 'floor' ? this.floorBackground : this.weatherEnabled && this.atmosphere.ready ? this.atmosphere.background : this.exteriorBackground;
     this.atmosphere.group.visible = mode === '3d' && this.weatherEnabled && !this.contextView;
     this.applyFog();
   }
