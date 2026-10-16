@@ -1,3 +1,4 @@
+import { pauseSceneAnimation } from './motion-helpers';
 import { test, expect, Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
@@ -16,6 +17,7 @@ async function ready(page: Page) {
   await page.goto('/');
   await expect(page.locator('.model-state')).toContainText('医院模型已加载', { timeout: process.env.CI ? 45000 : 20000 });
   await expect.poll(async () => (await state(page)).assetsReady, { timeout: process.env.CI ? 45000 : 20000 }).toBe(true);
+  await pauseSceneAnimation(page);
 }
 
 test('D1: original proposal toggles real rendered detail without moving the source or camera', async ({ page }) => {

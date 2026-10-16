@@ -41,3 +41,5 @@ Poly Haven license reference: https://docs.polyhaven.com/en/faq . Files retrieve
 ## Hospital billboard image
 
 `hospital-billboard.png`: AI-generated in this project on 2026-10-16 using the built-in imagegen tool. Text-free conceptual hospital atrium advertising imagery, not the real project interior, a supplied architectural asset or an endorsement. Generic figures and setting; no hospital name or external logo. Scene placements and associated trees/people/cars are illustrative proposals. Existing leaf texture credits and CC0 provenance above remain unchanged.
+
+The single portrait advertisement animates this local credited image with an owned CanvasTexture (pan and blue graphic motion). It is not a live hospital video. Entrance pedestrians and their walking gait/routes are project-generated illustrative geometry, not downloaded characters or measured footfall. The researched Innerscene/Quaternius/hospital candidates have not been included in runtime assets.

@@ -77,10 +77,11 @@ export class SceneAtmosphere {
     return true;
   }
   private drawSky(day: number, cloud: number, kind: string) {
+    if (this.referenceStyle) day = THREE.MathUtils.smoothstep(day, .02, .45);
     const context = this.canvas.getContext('2d')!;
     const overcast = cloud > .65 || ['rain', 'fog', 'storm', 'snow'].includes(kind);
-    const top = this.referenceStyle ? new THREE.Color(0x426c9b).lerp(new THREE.Color(overcast ? 0x335e8f : 0x206099), day) : new THREE.Color(0x061a32).lerp(new THREE.Color(overcast ? 0x52687c : 0x28699f), day);
-    const horizon = this.referenceStyle ? new THREE.Color(0x375985).lerp(new THREE.Color(overcast ? 0x244b78 : 0x0d3c6b), day) : new THREE.Color(0x234364).lerp(new THREE.Color(overcast ? 0xb0bcc5 : 0x91bddc), day);
+    const top = this.referenceStyle ? new THREE.Color(0x426c9b).lerp(new THREE.Color(overcast ? 0x6d8ea7 : 0x4886b9), day) : new THREE.Color(0x061a32).lerp(new THREE.Color(overcast ? 0x52687c : 0x28699f), day);
+    const horizon = this.referenceStyle ? new THREE.Color(0x375985).lerp(new THREE.Color(overcast ? 0x9dafbd : 0x78a4c6), day) : new THREE.Color(0x234364).lerp(new THREE.Color(overcast ? 0xb0bcc5 : 0x91bddc), day);
     const ground = new THREE.Color(0x0a1724).lerp(new THREE.Color(0x526b7d), day);
     const gradient = context.createLinearGradient(0, 0, 0, 1024);
     gradient.addColorStop(0, '#' + top.getHexString()); gradient.addColorStop(.52, '#' + horizon.getHexString()); gradient.addColorStop(1, '#' + ground.getHexString());

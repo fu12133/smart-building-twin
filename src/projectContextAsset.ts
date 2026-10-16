@@ -9,6 +9,7 @@ export class ProjectContextAsset {
   ready = false;
   private disposed = false;
   private emphasized = false;
+  private day = 0;
   private buildingMaterials = new Set<THREE.MeshStandardMaterial>();
   private palette = new Map<THREE.MeshStandardMaterial, THREE.Color>();
   private views: { mesh: THREE.Mesh; source: THREE.Material; design: THREE.MeshStandardMaterial[]; originalGroups: { start: number; count: number; materialIndex?: number }[]; groups: { start: number; count: number; materialIndex: number }[] }[] = [];
@@ -87,22 +88,22 @@ export class ProjectContextAsset {
         });
         this.views.push({ mesh, source, design, originalGroups: mesh.geometry.groups.map(g => ({ ...g })), groups: ProjectContextAsset.componentGroups(mesh.geometry, colors.length) });
       }
-      this.ready = true; this.setEmphasis(this.emphasized); onLoad();
+      this.ready = true; this.setEmphasis(this.emphasized, this.day); onLoad();
     }, undefined, () => { if (!this.disposed) onError(); });
   }
 
-  setEmphasis(enabled: boolean) {
-    this.emphasized = enabled;
+  setEmphasis(enabled: boolean, day = 0) {
+    this.emphasized = enabled; this.day = day;
     for (const view of this.views) { view.mesh.material = enabled ? view.design : view.source; view.mesh.geometry.groups = enabled ? view.groups : view.originalGroups; }
     for (const [material, source] of this.finishes) {
       const accent = enabled ? this.palette.get(material) : undefined;
-      material.color.copy(accent ?? source.color).multiplyScalar(enabled ? accent ? .65 : .22 : 1);
+      material.color.copy(accent ?? source.color).multiplyScalar(enabled ? accent ? THREE.MathUtils.lerp(.65, .85, day) : THREE.MathUtils.lerp(.22, .65, day) : 1);
       material.roughness = enabled ? Math.max(.72, source.roughness) : source.roughness;
       material.envMapIntensity = enabled ? .22 : source.environment;
       const ghost = enabled && this.buildingMaterials.has(material);
       const transparent = ghost || source.transparent;
       if (material.transparent !== transparent) { material.transparent = transparent; material.needsUpdate = true; }
-      material.opacity = ghost ? .38 : source.opacity;
+      material.opacity = ghost ? THREE.MathUtils.lerp(.38, .85, day) : source.opacity;
       material.depthWrite = ghost ? false : source.depthWrite;
     }
   }

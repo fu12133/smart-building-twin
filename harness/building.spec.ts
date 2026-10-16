@@ -1,3 +1,4 @@
+import { pauseSceneAnimation } from './motion-helpers';
 import { test, expect, Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
@@ -28,6 +29,7 @@ async function ready(page: Page) {
   await expect(page.locator('.model-state')).toContainText('医院模型已加载');
   await expect(page.locator('.scene-info')).toContainText('材质与灯光方案');
   await expect(page.locator('.asset-credit')).toContainText('项目白模.dwg');
+  await pauseSceneAnimation(page);
 }
 
 test('V1: real pointer rotation changes camera and rendered image', async ({ page }) => {

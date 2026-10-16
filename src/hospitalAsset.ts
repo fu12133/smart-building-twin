@@ -17,6 +17,13 @@ export class HospitalAsset {
   get billboardCount() { return this.design?.billboardCount ?? 0; }
   get entranceScreen() { return this.design?.entranceScreen; }
   get proposalFinishes() { return this.design?.finishState ?? []; }
+  get animationState() { return this.design?.animationState; }
+  get entranceAnchor() {
+    const group = this.design?.entranceGroup; if (!group) return undefined;
+    group.updateWorldMatrix(true, false);
+    return { position: group.getWorldPosition(new THREE.Vector3()), direction: new THREE.Vector3(0, 0, 1).transformDirection(group.matrixWorld) };
+  }
+  tickMotion(time: number, enabled: boolean, interval: number) { return this.design?.tickMotion(time, enabled, interval) ?? false; }
 
   constructor(url: string, private onLoad: () => void, private onError: () => void, invalidate: () => void = () => {}) {
     new GLTFLoader().load(url, asset => {

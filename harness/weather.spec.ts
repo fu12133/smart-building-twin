@@ -1,3 +1,4 @@
+import { pauseSceneAnimation } from './motion-helpers';
 import { test, expect, Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { NIGHT_TIME, WEATHER_ROUTE, weatherFixture } from './weather-fixture';
@@ -22,6 +23,7 @@ async function ready(page: Page) {
   await expect(page.locator('.model-state')).toContainText('医院模型已加载', { timeout: process.env.CI ? 45000 : 15000 });
   await expect(page.locator('.context-state')).toContainText('白模周边已加载', { timeout: process.env.CI ? 45000 : 15000 });
   await expect.poll(async () => (await snapshot(page)).assetsReady, { timeout: process.env.CI ? 45000 : 15000 }).toBe(true);
+  await pauseSceneAnimation(page);
 }
 test('G1: Shenzhen current weather, ticking Shanghai clock and day/night reflections', async ({ page }) => {
   test.setTimeout(process.env.CI ? 180000 : 60000);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { EntranceAnchor, ExitPedestrians } from './exitPedestrians';
 
 const random = (n: number) => { const x = Math.sin(n * 127.1 + 17.3) * 43758.5453; return x - Math.floor(x); };
 type Place = THREE.Vector3;
@@ -10,9 +11,12 @@ export class Streetscape {
   private pending = 2;
   private disposed = false;
   private textures: THREE.Texture[] = [];
+  private exits: ExitPedestrians;
+  get pedestrianState() { return this.exits.state; }
+  tickMotion(time: number, active: boolean, interval: number) { return this.exits.tick(time, active && this.root.visible, interval); }
   get assetsReady() { return this.pending === 0; }
 
-  constructor(hospital: THREE.Group, ground: THREE.Group, buildings: THREE.Group, invalidate: () => void) {
+  constructor(hospital: THREE.Group, ground: THREE.Group, buildings: THREE.Group, invalidate: () => void, entrance?: EntranceAnchor) {
     this.root.name = '场景布置方案'; this.root.userData.originalProposal = true;
     hospital.updateWorldMatrix(true, true); ground.updateWorldMatrix(true, true); buildings.updateWorldMatrix(true, true);
     const hospitalBounds = new THREE.Box3().setFromObject(hospital);
@@ -40,7 +44,8 @@ export class Streetscape {
     }
     const cars: Place[] = [];
     for (let i = 0; i < 8; i++) { const p = place(-36 + i * 10, 45 + i % 2 * 4, 2.4); if (p) cars.push(p); }
-    this.counts = { trees: trees.length, people: people.length, cars: cars.length };
+    this.exits = new ExitPedestrians(entrance, ground, buildings, hospital); this.root.add(this.exits.root);
+    this.counts = { trees: trees.length, people: people.length + this.exits.count, cars: cars.length };
     this.trees(trees, invalidate); this.people(people); this.cars(cars);
   }
 
@@ -125,6 +130,6 @@ export class Streetscape {
     this.disposed = true; this.root.removeFromParent();
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
     this.root.traverse(object => { if (object instanceof THREE.Mesh) { geometries.add(object.geometry); (Array.isArray(object.material) ? object.material : [object.material]).forEach(m => materials.add(m)); if (object instanceof THREE.InstancedMesh) object.dispose(); } });
-    geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); this.textures.forEach(t => t.dispose()); this.root.clear();
+    geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); this.textures.forEach(t => t.dispose()); this.exits.dispose(); this.root.clear();
   }
 }

@@ -80,6 +80,8 @@ export class BuildingScene {
   private originalProposal = true;
   private streetscape?: Streetscape;
   private streetscapeEnabled = true;
+  private sceneAnimation = true;
+  private animationInterval = 1000 / 12;
 
   constructor(private host: HTMLDivElement, private options: Options) {
     this.language = options.language ?? 'zh';
@@ -117,6 +119,7 @@ export class BuildingScene {
     const software = info && /swiftshader|llvmpipe|softpipe/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL));
     // Bound software-GPU submissions, including damping, so expensive frames cannot queue ahead of input.
     this.renderInterval = software ? 250 : 0;
+    this.animationInterval = software ? 500 : 1000 / 12;
     // Floating-point multisample resolves are costly on software GPUs. Both paths keep edge smoothing.
     const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: software ? 0 : Math.min(4, this.renderer.capabilities.maxSamples) });
     this.composer = new EffectComposer(this.renderer, target);
@@ -235,7 +238,7 @@ export class BuildingScene {
   }
   private buildStreetscape() {
     if (this.streetscape || !this.hospital?.ready || !this.context?.ready || this.destroyed) return;
-    this.streetscape = new Streetscape(this.hospital.root, this.context.ground, this.context.buildings, () => { this.renderDirty = true; });
+    this.streetscape = new Streetscape(this.hospital.root, this.context.ground, this.context.buildings, () => { this.renderDirty = true; }, this.hospital.entranceAnchor);
     this.city.add(this.streetscape.root);
     this.streetscape.root.visible = this.originalProposal && this.streetscapeEnabled && !this.contextView;
   }
@@ -267,8 +270,10 @@ export class BuildingScene {
     this.city.add(lights);
   }
   private setIllumination(mode: '3d' | 'floor') {
-    const { day, cloud } = this.atmosphere.profile;
-    const dayStrengths = [.8, .4 + 3.2 * this.atmosphere.sunStrength, .5, .7];
+    const { day: actualDay, cloud } = this.atmosphere.profile;
+    const heroDay = this.originalProposal && !this.contextView;
+    const day = heroDay ? THREE.MathUtils.smoothstep(actualDay, .02, .45) : actualDay;
+    const dayStrengths = [heroDay ? 1.3 : .8, .4 + 3.2 * this.atmosphere.sunStrength, heroDay ? .65 : .5, heroDay ? .9 : .7];
     this.globalLights.forEach(({ light, exterior, floor }, i) => { light.intensity = mode === '3d' ? THREE.MathUtils.lerp(exterior, dayStrengths[i], day) : floor; });
     const sunlight = this.globalLights[1]?.light as THREE.DirectionalLight | undefined;
     if (sunlight) {
@@ -290,11 +295,12 @@ export class BuildingScene {
       }
     });
     this.hospital?.setDaylight(day);
-    this.context?.setEmphasis(this.originalProposal && !this.contextView);
+    this.context?.setEmphasis(this.originalProposal && !this.contextView, day);
     if (this.streetscape) this.streetscape.root.visible = this.originalProposal && this.streetscapeEnabled && !this.contextView;
     this.hospital?.setStreetscape(this.streetscapeEnabled && !this.contextView);
     this.scene.environment = mode === '3d' && this.weatherEnabled && this.atmosphere.environment ? this.atmosphere.environment.texture : this.environmentTarget.texture;
-    this.scene.environmentIntensity = mode === '3d' ? THREE.MathUtils.lerp(this.originalProposal ? .16 : .09, .65, day) : .24;
+    this.scene.environmentIntensity = mode === '3d' ? THREE.MathUtils.lerp(this.originalProposal ? .16 : .09, heroDay ? .95 : .65, day) : .24;
+    this.renderer.toneMappingExposure = mode === '3d' && heroDay ? THREE.MathUtils.lerp(1.02, 1.08, day) : 1.02;
     this.bloom.strength = mode === '3d' ? THREE.MathUtils.lerp(.3, .12, day) : .14;
     this.bloom.radius = mode === '3d' ? .32 : .2;
     this.bloom.threshold = mode === '3d' ? THREE.MathUtils.lerp(1.15, 1.65, day) : 1.65;
@@ -309,7 +315,7 @@ export class BuildingScene {
     this.scene.fog.color.set(this.mode === 'floor' ? 0x102f4c : wet ? 0x182f46 : 0x102f4c);
     if (this.mode === '3d') {
       this.scene.fog.color.lerp(new THREE.Color(wet ? 0x8398a8 : 0x86acc8), day);
-      if (this.originalProposal) this.scene.fog.color.set(wet ? 0x355773 : 0x0d355b);
+      if (this.originalProposal) this.scene.fog.color.set(wet ? 0x355773 : 0x0d355b).lerp(new THREE.Color(wet ? 0x92a8b9 : 0x729bbd), THREE.MathUtils.smoothstep(day, .02, .45));
     }
     this.scene.fog.density = this.mode === '3d' && this.contextView ? .00012 : this.mode === 'floor' ? .0028 : wet ? kind === 'fog' ? .005 : .0032 : THREE.MathUtils.lerp(.0028, .0009, day);
   }
@@ -407,6 +413,7 @@ export class BuildingScene {
     this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
   }
   setStreetscape(enabled: boolean) { this.streetscapeEnabled = enabled; this.setIllumination(this.mode); this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true; }
+  setSceneAnimation(enabled: boolean) { this.sceneAnimation = enabled; this.renderDirty = true; }
   setLanguage(language: Language) {
     this.language = language;
     this.renderer.domElement.setAttribute('aria-label', translate('可旋转的楼宇三维模型', language));
@@ -543,6 +550,9 @@ export class BuildingScene {
     this.controls.dampingFactor = 1 - Math.pow(1 - .09, elapsed * 60);
     this.controls.update(Math.min(elapsed, .05)); this.lastTime = time;
     if (this.atmosphere.tick(time)) this.renderDirty = true;
+    const motion = this.sceneAnimation && this.mode === '3d' && this.originalProposal && this.streetscapeEnabled && !this.contextView && !document.hidden;
+    if (this.hospital.tickMotion(time, motion, this.animationInterval)) this.renderDirty = true;
+    if (this.streetscape?.tickMotion(time, motion, this.animationInterval)) this.renderDirty = true;
     // Static architecture needs no repeated GPU work. Controls still tick for smooth damping/patrol.
     if (this.renderDirty && time - this.lastRenderTime >= this.renderInterval) {
       this.renderer.info.reset(); this.composer.render(); this.frame++;
@@ -575,7 +585,7 @@ export class BuildingScene {
       .map(([x, y]) => new THREE.Vector3(x, y, 0).applyMatrix4(screen.matrixWorld).project(this.camera).toArray());
     return { corners, imageReady: !!(screen.material as THREE.MeshBasicMaterial).map?.image };
   }
-  snapshot() { return { entranceScreen: this.entranceScreenState(), hospitalFinishes: this.hospital.proposalFinishes, streetscape: { ...this.streetscape?.counts, billboards: this.hospital.billboardCount, visible: this.mode === '3d' && this.originalProposal && this.streetscapeEnabled && !this.contextView && !!this.streetscape }, offsetProjection: !!this.camera.view?.enabled, contextFinishes: this.context.finishState, moon: { strength: this.atmosphere.moonStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.moonStrength > 0, screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, visibleTriangles: this.visibleTriangles(), sun: { preview: this.atmosphere.preview, strength: this.atmosphere.sunStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.sunStrength > 0, direction: this.atmosphere.sunDirection.toArray(), screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), originalProposal: this.originalProposal, proposalDetails: this.hospital.proposalDetails, mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.assetsReady && this.context.ready && !!this.streetscape?.assetsReady && !this.renderDirty }; }
+  snapshot() { return { sceneAnimation: { enabled: this.sceneAnimation, billboard: this.hospital.animationState, pedestrians: this.streetscape?.pedestrianState }, entranceScreen: this.entranceScreenState(), hospitalFinishes: this.hospital.proposalFinishes, streetscape: { ...this.streetscape?.counts, billboards: this.hospital.billboardCount, visible: this.mode === '3d' && this.originalProposal && this.streetscapeEnabled && !this.contextView && !!this.streetscape }, offsetProjection: !!this.camera.view?.enabled, contextFinishes: this.context.finishState, moon: { strength: this.atmosphere.moonStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.moonStrength > 0, screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, visibleTriangles: this.visibleTriangles(), sun: { preview: this.atmosphere.preview, strength: this.atmosphere.sunStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.sunStrength > 0, direction: this.atmosphere.sunDirection.toArray(), screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), originalProposal: this.originalProposal, proposalDetails: this.hospital.proposalDetails, mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.assetsReady && this.context.ready && !!this.streetscape?.assetsReady && !this.renderDirty }; }
   dispose() {
     this.destroyed = true; cancelAnimationFrame(this.frameId); this.observer.disconnect(); this.controls.dispose(); this.disposables.forEach(fn => fn());
     this.clearFloor();

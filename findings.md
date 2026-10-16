@@ -86,3 +86,12 @@
 - 原生RTX5090默认/近景/反向及隐藏周边后的主体反向截图均捕获检查；近邻建筑按源位置遮挡部分角度，图层隐藏后可单独检视源主体。没有浏览器error，未做FPS测量。
 - 公网运行af98732已核对产物/来源清单，最终生产harness1/1（37.1秒），实际默认/全景截图均检查，三项资产200，无浏览器错误。首次主体加载超过默认5秒，改为独立30秒初始化窗口后通过，操作和错误目标不变。
 - 已发布c293106，云端38/38与公网真实天气/交互1/1通过；温度25.7°C、数据时刻18:30与UI对应。最终公网默认/全景/天气截图已检查，源资产与来源清单一致。
+
+
+## 2026-10-16 对应开放素材再次核对
+- agent-reach Exa CLI服务器未配置，按最佳可用网页搜索与官网核对；Jina读取marble_bisque返回404，排除该猜测。未安装新后台。agent-reach1.5.0检查为最新。
+- Sam行走人物： https://www.innerscene.com/tools/library/3d-parts/brisk-walk-sam-3d-person-animated-bed03fa4 ，官方CC0，GLB20MB，1.733s循环/骨骼/贴图，1.7m/s原地步行动作；源为MakeHuman/MPFB CC0改编。普通HTTP读取403，浏览器素材页创建后DOM绑定超时；仅核对网页说明，未下载、导入或声称实际画质/性能验收。
+- Quaternius Universal Base Characters： https://quaternius.com/packs/universalbasecharacters.html ，CC0，6基础人物/平均13k三角、glTF/FBX，与Universal Animation Library兼容。Standard是免费子集，Pro/Source含付费增补；偏游戏化，不能包装成照片级医患人物。未下载。
+- Poly Haven Tree Small02： https://polyhaven.com/a/tree_small_02 ，CC0，原始约5M三角、4.6m高，页面有LODs标签；高模不可直接大量复制入网页。现项目仅复用其既有叶片贴图，不声称已导入整树。Stone Tile Wall和Sandstone Blocks05是粗糙/风化墙，不直接推荐作本参考的光洁医院大板。
+- Beige Wall001： https://polyhaven.com/a/beige_wall_001 ，CC0光滑米色涂层PBR，含颜色/法线/粗糙度（并非石材）。Kloofendal48d PartlyCloudy PureSky： https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky ，CC0日间HDR，可作通用光照参考，不是深圳实景。API直读403，未下载/导入。
+- Hospital by iagoArt3D仍为约8.4k三角/CC BY备选，形体不同于用户源医院。整套同款开放精模未查到确认来源。保持源白模，不把参考效果图当可下载三维素材。

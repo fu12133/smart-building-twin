@@ -1,3 +1,4 @@
+import { pauseSceneAnimation } from './motion-helpers';
 import { test, expect, Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { NIGHT_TIME, WEATHER_ROUTE, weatherFixture } from './weather-fixture';
@@ -27,6 +28,7 @@ async function ready(page: Page) {
   await page.goto('/');
   await expect(page.locator('.model-state')).toContainText('医院模型已加载', { timeout: process.env.CI ? 45000 : 20000 });
   await settled(page);
+  await pauseSceneAnimation(page);
 }
 
 test('S1: visible sunny preview preserves real weather, pose, floor lighting and language state', async ({ page }) => {

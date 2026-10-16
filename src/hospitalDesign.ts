@@ -1,9 +1,10 @@
 import * as THREE from 'three';
+import { BillboardMotion } from './billboardMotion';
 
 type Point = [number, number];
 type Face = { zone: string; n: THREE.Vector3; u: THREE.Vector3; distance: number; triangles: Point[][] };
-type Part = { zone: string; position: THREE.Vector3; rotation: THREE.Quaternion; size: THREE.Vector3 };
-type Surface = { mesh: THREE.Mesh; source: THREE.Material | THREE.Material[]; design: THREE.Material | THREE.Material[] };
+type Part = { zone: string; podium: boolean; position: THREE.Vector3; rotation: THREE.Quaternion; size: THREE.Vector3 };
+type Surface = { mesh: THREE.Mesh; source: THREE.Material | THREE.Material[]; design: THREE.Material | THREE.Material[]; sourceGroups?: { start: number; count: number; materialIndex?: number }[]; designGroups?: { start: number; count: number; materialIndex: number }[] };
 const random = (n: number) => { const x = Math.sin(n * 127.1 + 21.7) * 43758.5453; return x - Math.floor(x); };
 
 /** Original optional art proposal. Source buffers and coordinates are never edited. */
@@ -21,14 +22,20 @@ export class HospitalDesign {
   private podiumGlass: THREE.MeshPhysicalMaterial;
   private podiumStone: THREE.MeshStandardMaterial;
   private podiumMetal: THREE.MeshStandardMaterial;
-  private screenGeometry = new THREE.PlaneGeometry(5.6, 2.8);
+  private podiumFinishes: THREE.MeshStandardMaterial[];
+  private screenGeometry = new THREE.PlaneGeometry(2.8, 4.65);
+  private motion = new BillboardMotion();
   private disposed = false;
   private advertPending = true;
   private advertising = new THREE.Group();
   private entryScreen?: THREE.Mesh;
+  private doorway?: THREE.Group;
+  get entranceGroup() { return this.doorway; }
+  get animationState() { return { frame: this.motion.frame, active: this.motion.active }; }
+  tickMotion(time: number, enabled: boolean, interval: number) { return this.motion.tick(time, enabled && this.root.visible && this.advertising.visible, interval); }
   get entranceScreen() { return this.entryScreen; }
   get finishState() {
-    return this.surfaces.flatMap(({ mesh }) => (Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+    return this.surfaces.flatMap(({ mesh }) => (Array.isArray(mesh.material) ? [...new Set(mesh.geometry.groups.map(g => g.materialIndex ?? 0))].map(i => (mesh.material as THREE.Material[])[i]) : [mesh.material])
       .filter((m): m is THREE.MeshStandardMaterial => m instanceof THREE.MeshStandardMaterial)
       .map(m => [String(mesh.userData.building), m.name, m.color.getHexString()]));
   }
@@ -39,7 +46,7 @@ export class HospitalDesign {
   constructor(model: THREE.Object3D, invalidate: () => void = () => {}) {
     this.root.name = '原创现代医院外观方案'; this.root.userData.originalProposal = true;
     const maps = this.windows();
-    this.glass = new THREE.MeshPhysicalMaterial({ name: 'original-hospital-glass', color: 0xffffff,
+    this.glass = new THREE.MeshPhysicalMaterial({ name: 'original-hospital-glass', color: 0xadc6d4,
       map: maps.color, emissiveMap: maps.light, emissive: 0xffd8a4, emissiveIntensity: 1.1,
       roughness: .09, roughnessMap: maps.rough, metalness: .12, ior: 1.5,
       clearcoat: 1, clearcoatRoughness: .06, envMapIntensity: 8, side: THREE.DoubleSide });
@@ -48,21 +55,25 @@ export class HospitalDesign {
     this.podiumGlass.color.set(0x609b97); this.podiumGlass.roughness = .19; this.podiumGlass.envMapIntensity = 4;
     this.pearl = new THREE.MeshStandardMaterial({ name: 'proposal-tower-panel', color: 0xc8dbe6,
       map: this.panels(), roughness: .48, metalness: .12, side: THREE.DoubleSide });
-    this.podiumStone = new THREE.MeshStandardMaterial({ name: 'proposal-podium-stone', color: 0xc9a16b,
-      map: this.pearl.map, roughness: .65, metalness: .03, emissive: 0xffc679, side: THREE.DoubleSide });
+    this.podiumStone = new THREE.MeshStandardMaterial({ name: 'proposal-podium-stone', color: 0xd8c4a4,
+      map: this.pearl.map, roughness: .65, metalness: .03, emissive: 0xffe0b0, side: THREE.DoubleSide });
+    this.podiumFinishes = [this.podiumStone, ...[0x8e9da9, 0x354654, 0xbac6ce, 0xebe6d8].map((color, i) => {
+      const material = this.podiumStone.clone(); material.name = ['proposal-podium-roof', 'proposal-podium-base', 'proposal-podium-west-wall', 'proposal-podium-entry-wall'][i]; material.color.set(color); material.emissive.set(0x000000); return material;
+    })];
     const aluminium = this.aluminium = new THREE.MeshStandardMaterial({ color: 0xd4e3e6, emissive: 0xd6e5ed, roughness: .21, metalness: .55 });
     const porcelain = this.porcelain = new THREE.MeshStandardMaterial({ color: 0xe9efed, emissive: 0xfff2db, roughness: .26, metalness: .24 });
-    this.podiumMetal = new THREE.MeshStandardMaterial({ name: 'proposal-podium-metal', color: 0xb6a17a, emissive: 0xf2c98a, roughness: .33, metalness: .6 });
+    this.podiumMetal = new THREE.MeshStandardMaterial({ name: 'proposal-podium-metal', color: 0x94a5b0, emissive: 0xbfd4e3, roughness: .33, metalness: .6 });
     this.pearl.emissive.set(0xc9e2f4);
     this.glow = new THREE.MeshStandardMaterial({ color: 0xe7ce9f, emissive: 0xffd5a0, emissiveIntensity: 1.6, roughness: .45 });
     const blue = new THREE.MeshStandardMaterial({ color: 0x168f9c, metalness: .4, roughness: .25 });
-    this.materials.push(this.glass, this.pearl, aluminium, porcelain, this.glow, blue, this.podiumGlass, this.podiumStone, this.podiumMetal);
+    this.materials.push(this.glass, this.pearl, aluminium, porcelain, this.glow, blue, this.podiumGlass, this.podiumMetal, ...this.podiumFinishes);
     const ad = new THREE.TextureLoader().load(import.meta.env.BASE_URL + 'assets/hospital-billboard.png', texture => {
       if (this.disposed) { texture.dispose(); return; }
+      this.motion.setSource(texture.image as HTMLImageElement);
       this.advertPending = false; invalidate();
     }, undefined, () => { if (!this.disposed) { this.advertPending = false; invalidate(); } });
     ad.colorSpace = THREE.SRGBColorSpace; ad.anisotropy = 4; this.textures.push(ad);
-    const screen = new THREE.MeshBasicMaterial({ map: ad, toneMapped: false }); this.materials.push(screen);
+    const screen = new THREE.MeshBasicMaterial({ map: this.motion.texture, toneMapped: false }); this.materials.push(screen);
     const faces = new Map<string, Face>();
     model.updateMatrixWorld(true);
     model.traverse(object => {
@@ -70,7 +81,12 @@ export class HospitalDesign {
       const source = object.material;
       const podium = object.userData.building === 'B';
       const design = (Array.isArray(source) ? source : [source]).map(material => material.name === 'project-glass' ? podium ? this.podiumGlass : this.glass : podium ? this.podiumStone : this.pearl);
-      this.surfaces.push({ mesh: object, source, design: Array.isArray(source) ? design : design[0] });
+      const sourceGlass = (Array.isArray(source) ? source : [source]).every(m => m.name === 'project-glass');
+      if (!podium || !sourceGlass) {
+        const sourceGroups = object.geometry.groups.map((g: { start: number; count: number; materialIndex?: number }) => ({ ...g }));
+        const designGroups = this.podiumGroups(object, podium, sourceGlass);
+        this.surfaces.push({ mesh: object, source, design: podium ? this.podiumFinishes : sourceGlass ? [this.glass, this.podiumGlass] : [this.pearl, ...this.podiumFinishes], sourceGroups, designGroups });
+      } else this.surfaces.push({ mesh: object, source, design: Array.isArray(source) ? design : design[0] });
       if (!(Array.isArray(source) ? source : [source]).some(m => m.name === 'project-glass')) return;
       const positions = object.geometry.getAttribute('position');
       const indices = object.geometry.index, count = indices?.count ?? positions.count;
@@ -95,7 +111,7 @@ export class HospitalDesign {
       const minU = Math.min(...us), maxU = Math.max(...us), minY = Math.min(...ys), maxY = Math.max(...ys);
       const rotation = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(face.u, new THREE.Vector3(0, 1, 0), face.n));
       const part = (u: number, y: number, w: number, h: number, d: number, offset = .05): Part => ({
-        zone: face.zone, position: face.u.clone().multiplyScalar(u).addScaledVector(face.n, face.distance + offset).add(new THREE.Vector3(0, y, 0)),
+        zone: face.zone, podium: face.zone === 'B' || y < 8.1, position: face.u.clone().multiplyScalar(u).addScaledVector(face.n, face.distance + offset).add(new THREE.Vector3(0, y, 0)),
         rotation, size: new THREE.Vector3(w, h, d),
       });
       // Intersect with actual wall triangles, preserving courtyard gaps and side profiles.
@@ -103,8 +119,11 @@ export class HospitalDesign {
       for (let u = Math.ceil(minU / mullionSpacing) * mullionSpacing; u <= maxU; u += mullionSpacing) {
         for (const [from, to] of this.intervals(face.triangles, 0, u)) {
           if (to - from < .25) continue;
-          frames.push(part(u, (from + to) / 2, .055, to - from, .12, .07));
-          if (face.zone === 'A' && Math.round(u / 1.5) % 3 === 0) fins.push(part(u, (from + to) / 2, .24, to - from, .58, .23));
+          if (face.zone === 'A' && from < 8.1 && to > 8.1) {
+            frames.push(part(u, (8.1 + to) / 2, .055, to - 8.1, .12, .07));
+            if (Math.round(u / 1.5) % 2 === 0) frames.push(part(u, (from + 8.1) / 2, .055, 8.1 - from, .12, .07));
+          } else if (face.zone !== 'A' || from >= 8.1 || Math.round(u / 1.5) % 2 === 0) frames.push(part(u, (from + to) / 2, .055, to - from, .12, .07));
+          if (face.zone === 'A' && to > 8.1 && Math.round(u / 1.5) % 3 === 0) fins.push(part(u, (Math.max(from, 8.1) + to) / 2, .24, to - Math.max(from, 8.1), .58, .23));
         }
       }
       const storey = 15.44 / 4;
@@ -112,55 +131,37 @@ export class HospitalDesign {
         for (const [from, to] of this.intervals(face.triangles, 1, y)) {
           if (to - from < .08) continue;
           frames.push(part((from + to) / 2, y, to - from, .065, .13, .06));
-          bands.push(part((from + to) / 2, y - .15, to - from, face.zone === 'A' ? .4 : .85, .22, .08));
+          bands.push(part((from + to) / 2, y - .15, to - from, face.zone === 'A' && y > 8.1 ? .4 : .85, .22, .08));
           if (face.zone === 'B' || Math.round(y / storey) % 3 === 0) lights.push(part((from + to) / 2, y - .29, to - from, .025, .04, .205));
         }
       }
       for (const [from, to] of this.intervals(face.triangles, 1, maxY - .025)) if (to - from > .08) bands.push(part((from + to) / 2, maxY, to - from, .15, .24, .06));
-      if (minY < 2.2 && maxY > 7.4) {
+      if (face.zone === 'B' && minY < 2.2 && maxY > 7.4) {
         for (const [from, to] of this.intervals(face.triangles, 1, 3.2)) {
-          if (to - from < 9) continue;
-          const score = (face.zone === 'A' ? 30 : 0) + face.n.dot(new THREE.Vector3(-.84, 0, .54)) * 10 + Math.min(to - from, 20) / 20;
+          if (to - from < 14) continue;
+          const adU = THREE.MathUtils.clamp(face.u.dot(new THREE.Vector3(16, 0, 17)), from + 10, to - 2);
+          const p = face.u.clone().multiplyScalar(adU).addScaledVector(face.n, face.distance);
+          const score = face.n.dot(new THREE.Vector3(-.84, 0, .54)) * 8 - Math.hypot(p.x - 16, p.z - 17) * .35;
           if (!entry || score > entry.score) entry = { face, from, to, score };
         }
       }
     }
     this.batch(frames, aluminium, this.podiumMetal); this.batch(bands, this.pearl, this.podiumStone); this.batch(fins, porcelain); this.batch(lights, this.glow);
-    if (entry) this.entrance(entry.face, (entry.from + entry.to) / 2, aluminium, blue, porcelain);
+    if (entry) this.entrance(entry.face, THREE.MathUtils.clamp(entry.face.u.dot(new THREE.Vector3(16, 0, 17)), entry.from + 10, entry.to - 2) - 6.7, aluminium, blue, porcelain);
     if (entry) {
-      const { face } = entry, center = (entry.from + entry.to) / 2;
+      const { face } = entry, center = THREE.MathUtils.clamp(face.u.dot(new THREE.Vector3(16, 0, 17)), entry.from + 10, entry.to - 2);
       const board = new THREE.Group(); board.name = 'proposed-main-entrance-advertisement';
       board.userData = { building: face.zone, originalProposal: true, billboard: true };
-      board.position.copy(face.u).multiplyScalar(center).addScaledVector(face.n, face.distance + 3.3);
+      board.position.copy(face.u).multiplyScalar(center).addScaledVector(face.n, face.distance + .24);
       board.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(face.u, new THREE.Vector3(0, 1, 0), face.n));
-      const frame = new THREE.Mesh(this.unit, this.podiumMetal); frame.scale.set(8.5, 4.4, .2); frame.position.y = 5.3; board.add(frame);
+      const backing = new THREE.Mesh(this.unit, this.podiumFinishes[4]); backing.scale.set(4.4, 8, .18); backing.position.set(0, 4, -.15); board.add(backing);
+      const frame = new THREE.Mesh(this.unit, this.podiumFinishes[2]); frame.scale.set(3.05, 4.9, .16); frame.position.y = 5.2; board.add(frame);
       const image = this.entryScreen = new THREE.Mesh(this.screenGeometry, screen); image.name = 'entrance-advertising-screen';
-      image.scale.set(8.2 / 5.6, 4.1 / 2.8, 1); image.position.set(0, 5.3, .12); board.add(image);
-      for (const x of [-4.05, 4.05]) { const post = new THREE.Mesh(this.unit, this.podiumMetal); post.scale.set(.16, 4.25, .2); post.position.set(x, 5.15, -.2); board.add(post); }
+      image.position.set(0, 5.2, .09); board.add(image);
       this.advertising.add(board);
     }
-    const advertisements: { face: Face; center: number; y: number; score: number }[] = [];
-    for (const face of faces.values()) {
-      if (face.zone !== 'B') continue;
-      const ys = face.triangles.flat().map(p => p[1]), min = Math.min(...ys), max = Math.max(...ys), y = Math.min(6, max - 1.6);
-      if (min > 2.3 || y - 1.45 < min) continue;
-      for (const [from, to] of this.intervals(face.triangles, 1, y)) {
-        if (to - from < 7) continue;
-        const center = (from + to) / 2;
-        if (![y - 1.45, y + 1.45].every(level => this.intervals(face.triangles, 1, level).some(([a, b]) => a <= center - 2.9 && b >= center + 2.9))) continue;
-        advertisements.push({ face, center, y, score: face.n.dot(new THREE.Vector3(-.84, 0, .54)) + Math.min(to - from, 20) / 100 });
-      }
-    }
-    const chosen = advertisements.sort((a, b) => b.score - a.score).slice(0, 3);
-    for (const { face, center, y } of chosen) {
-      const board = new THREE.Group(); board.userData = { building: 'B', originalProposal: true, billboard: true };
-      board.position.copy(face.u).multiplyScalar(center).addScaledVector(face.n, face.distance + .35); board.position.y = y;
-      board.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(face.u, new THREE.Vector3(0, 1, 0), face.n));
-      const frame = new THREE.Mesh(this.unit, aluminium); frame.scale.set(5.85, 3.05, .14); board.add(frame);
-      const image = new THREE.Mesh(this.screenGeometry, screen); image.position.z = .08; board.add(image); this.advertising.add(board);
-    }
     this.root.add(this.advertising);
-    this.billboardCount = chosen.length + (entry ? 1 : 0);
+    this.billboardCount = entry ? 1 : 0;
     this.detailCount = frames.length + bands.length + fins.length + lights.length;
     model.add(this.root); this.setEnabled(true);
   }
@@ -186,34 +187,52 @@ export class HospitalDesign {
     return merged;
   }
 
+  private podiumGroups(mesh: THREE.Mesh, podium: boolean, glass: boolean) {
+    const p = mesh.geometry.getAttribute('position'), index = mesh.geometry.index, count = index?.count ?? p.count;
+    const groups: { start: number; count: number; materialIndex: number }[] = [];
+    for (let i = 0; i < count; i += 3) {
+      const v = [0, 1, 2].map(j => new THREE.Vector3().fromBufferAttribute(p, index ? index.getX(i + j) : i + j).applyMatrix4(mesh.matrixWorld));
+      const n = v[1].clone().sub(v[0]).cross(v[2].clone().sub(v[0])).normalize(), c = v[0].clone().add(v[1]).add(v[2]).divideScalar(3);
+      const lower = Math.abs(n.y) > .55 ? 1 : c.y < 1.2 ? 2 : c.x < -15 ? 3 : c.x < 3 ? 4 : 0;
+      const materialIndex = podium ? lower : c.y > 8.1 ? 0 : glass ? 1 : lower + 1;
+      const previous = groups[groups.length - 1];
+      if (previous?.materialIndex === materialIndex) previous.count += 3; else groups.push({ start: i, count: 3, materialIndex });
+    }
+    return groups;
+  }
+
   private batch(parts: Part[], material: THREE.Material, podiumMaterial = material) {
     for (const zone of ['A', 'B']) {
       const list = parts.filter(p => p.zone === zone); if (!list.length) continue;
-      const mesh = new THREE.InstancedMesh(this.unit, zone === 'B' ? podiumMaterial : material, list.length), matrix = new THREE.Matrix4();
-      list.forEach((p, i) => mesh.setMatrixAt(i, matrix.compose(p.position, p.rotation, p.size)));
-      mesh.userData = { building: zone, originalProposal: true }; mesh.castShadow = material !== this.glow; mesh.receiveShadow = material !== this.glow;
-      mesh.computeBoundingSphere(); this.root.add(mesh);
+      const batches = new Map<THREE.Material, Part[]>();
+      for (const p of list) {
+        const finish = zone === 'A' && !p.podium ? material : podiumMaterial !== this.podiumStone ? podiumMaterial : this.podiumFinishes[p.position.y > 7.5 ? 1 : p.position.x < -15 ? 3 : p.position.x < 3 ? 4 : 0];
+        const batch = batches.get(finish) ?? []; batch.push(p); batches.set(finish, batch);
+      }
+      for (const [finish, batch] of batches) {
+        const mesh = new THREE.InstancedMesh(this.unit, finish, batch.length), matrix = new THREE.Matrix4();
+        batch.forEach((p, i) => mesh.setMatrixAt(i, matrix.compose(p.position, p.rotation, p.size)));
+        mesh.userData = { building: zone, originalProposal: true }; mesh.castShadow = material !== this.glow; mesh.receiveShadow = material !== this.glow;
+        mesh.computeBoundingSphere(); this.root.add(mesh);
+      }
     }
   }
 
   private entrance(face: Face, center: number, metal: THREE.Material, blue: THREE.Material, white: THREE.Material) {
-    const group = new THREE.Group(); group.userData = { building: face.zone, originalProposal: true };
+    const group = this.doorway = new THREE.Group(); group.name = 'proposed-recessed-entrance'; group.userData = { building: face.zone, originalProposal: true };
     group.position.copy(face.u).multiplyScalar(center).addScaledVector(face.n, face.distance + .14);
     group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(face.u, new THREE.Vector3(0, 1, 0), face.n));
     const box = (w: number, h: number, d: number, x: number, y: number, z: number, material: THREE.Material) => {
       const mesh = new THREE.Mesh(this.unit, material); mesh.scale.set(w, h, d); mesh.position.set(x, y, z);
       mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh);
     };
-    const canopy = new THREE.MeshPhysicalMaterial({ color: 0x9ccbd1, metalness: .12, roughness: .08, clearcoat: 1, transparent: true, opacity: .76, depthWrite: false });
-    this.materials.push(canopy);
-    box(8.4, .12, 3.2, 0, 3.05, 1.5, canopy);
-    box(8.7, .23, .18, 0, 3.03, 3.02, white); box(8.5, .035, .07, 0, 2.91, 3.12, this.glow);
-    for (const x of [-4.05, 4.05]) { box(.12, 2.95, .12, x, 1.5, 2.9, metal); box(.13, .18, 3.2, x, 3.01, 1.5, metal); }
-    for (const x of [-2, 0, 2]) box(.07, .07, 3.15, x, 3.14, 1.5, metal);
-    box(4.6, 2.6, .13, 0, 1.4, .025, this.glass);
-    for (const x of [-2.35, 0, 2.35]) box(.07, 2.7, .18, x, 1.42, .08, metal);
-    box(5.1, .65, .2, 0, 2.6, .17, blue);
-    box(.38, .07, .025, 0, 2.6, .285, white); box(.07, .38, .025, 0, 2.6, .285, white);
+    box(6.4, 7.1, .12, 0, 3.55, .01, this.podiumFinishes[2]);
+    for (const x of [-3.1, 3.1]) box(.4, 7.2, .9, x, 3.6, .45, this.podiumFinishes[4]);
+    box(6.6, .55, .95, 0, 7.0, .45, this.podiumFinishes[4]);
+    box(5.8, .14, .7, 0, 3.0, .4, metal); box(5.6, .035, .05, 0, 2.91, .76, this.glow);
+    box(5.2, 2.7, .08, 0, 1.4, .12, this.podiumGlass);
+    for (const x of [-2.6, 0, 2.6]) box(.06, 2.8, .12, x, 1.42, .18, metal);
+    box(5.8, .14, .08, 0, 6.3, .14, blue);
     this.root.add(group);
   }
 
@@ -261,7 +280,7 @@ export class HospitalDesign {
   }
 
   setEnabled(enabled: boolean) {
-    this.root.visible = enabled; this.surfaces.forEach(s => { s.mesh.material = enabled ? s.design : s.source; });
+    this.root.visible = enabled; this.surfaces.forEach(s => { s.mesh.material = enabled ? s.design : s.source; if (s.sourceGroups && s.designGroups) s.mesh.geometry.groups = enabled ? s.designGroups : s.sourceGroups; });
   }
   setStreetscape(enabled: boolean) { this.advertising.visible = enabled; }
   setDaylight(day: number) {
@@ -276,6 +295,7 @@ export class HospitalDesign {
   }
   dispose() {
     this.disposed = true;
+    this.motion.dispose();
     // Restore source references so HospitalAsset releases hidden original materials too.
     this.setEnabled(false); this.root.removeFromParent();
     this.root.traverse(object => { if (object instanceof THREE.InstancedMesh) object.dispose(); });
