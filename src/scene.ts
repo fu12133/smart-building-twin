@@ -119,7 +119,7 @@ export class BuildingScene {
     const software = info && /swiftshader|llvmpipe|softpipe/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL));
     // Bound software-GPU submissions, including damping, so expensive frames cannot queue ahead of input.
     this.renderInterval = software ? 250 : 0;
-    this.animationInterval = software ? 500 : 1000 / 12;
+    this.animationInterval = software ? 1000 : 1000 / 12;
     // Floating-point multisample resolves are costly on software GPUs. Both paths keep edge smoothing.
     const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: software ? 0 : Math.min(4, this.renderer.capabilities.maxSamples) });
     this.composer = new EffectComposer(this.renderer, target);

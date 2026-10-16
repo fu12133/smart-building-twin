@@ -40,6 +40,11 @@ test('production assets and model interactions work under repository URL', async
   await page.getByRole('button', { name: '关闭天气详情' }).click();
   await expect(page.locator('.scene-info')).toContainText('原创现代医院');
   await expect(page.locator('.scene-info')).toContainText('树木、人物、车辆、广告牌');
+  await expect(page.locator('.motion-state')).toContainText('广告播放 · 入口人流（示意）');
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('场景动画', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await expect(page.locator('.motion-state')).toHaveText('场景动画已暂停');
   const propsImage = createHash('sha256').update(await canvas.screenshot()).digest('hex');
   await page.getByRole('button', { name: '图层设置' }).click();
   await page.getByLabel('场景配套', { exact: true }).uncheck();
