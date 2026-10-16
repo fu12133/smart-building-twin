@@ -1,0 +1,77 @@
+import { test, expect } from '@playwright/test';
+import { NIGHT_TIME, WEATHER_ROUTE, weatherFixture } from './weather-fixture';
+
+test('R1: reference blue palette, right data columns and centered floor remain usable', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 150000 : 60000);
+  await page.setViewportSize({ width: 1378, height: 649 });
+  await page.clock.setFixedTime(NIGHT_TIME);
+  await page.route(WEATHER_ROUTE, route => route.fulfill({ json: weatherFixture() }));
+  await page.goto('/');
+  const state = () => page.evaluate(() => window.__BUILDING_HARNESS__!());
+  const settled = () => expect.poll(async () => (await state()).assetsReady, { timeout: process.env.CI ? 45000 : 20000 }).toBe(true);
+  await settled(); const original = await state(); expect(original.offsetProjection).toBe(true);
+  const first = (await page.locator('.left-panels').boundingBox())!, second = (await page.locator('.right-panels').boundingBox())!;
+  expect(first.x).toBeGreaterThan(1378 * .59); expect(second.x).toBeGreaterThan(first.x + first.width);
+  expect(first.y + first.height).toBeLessThanOrEqual(649); expect(second.y + second.height).toBeLessThanOrEqual(649);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: 'artifacts/harness/reference-style-desktop.png' });
+  const png = await page.screenshot();
+  const sky = await page.evaluate(async data => {
+    const image = new Image(); image.src = 'data:image/png;base64,' + data; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+    const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+    return [...context.getImageData(800, 100, 1, 1).data].slice(0, 3);
+  }, png.toString('base64'));
+  // Reference pixel (800,100) = [26,88,144]; allow lighting/tone-mapping variation.
+  [26, 88, 144].forEach((channel, i) => expect(Math.abs(sky[i] - channel)).toBeLessThan(35));
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Smart Hospital Management', exact: true })).toBeVisible();
+  expect((await state()).camera).toEqual(original.camera);
+  await page.screenshot({ path: 'artifacts/harness/reference-style-en.png' });
+  await page.getByRole('button', { name: '2.5D Floor', exact: true }).click(); await settled();
+  expect((await state()).offsetProjection).toBe(false);
+  await page.getByRole('button', { name: '3D Campus', exact: true }).click(); await settled();
+  expect((await state()).offsetProjection).toBe(true); expect((await state()).camera).toEqual(original.camera);
+  await expect(page.locator('.metrics')).toBeHidden();
+  await page.getByRole('button', { name: 'Scene layers', exact: true }).click();
+  await page.getByLabel('Summary metrics', { exact: true }).check();
+  await expect(page.locator('.metrics')).toBeVisible();
+  await page.getByLabel('Summary metrics', { exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Scene layers', exact: true }).click();
+  expect((await state()).camera).toEqual(original.camera);
+});
+
+test('R2: source-anchored streetscape, image boards and varied context are optional real geometry', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 150000 : 60000);
+  await page.clock.setFixedTime(NIGHT_TIME);
+  await page.route(WEATHER_ROUTE, route => route.fulfill({ json: weatherFixture() }));
+  await page.goto('/');
+  const state = () => page.evaluate(() => window.__BUILDING_HARNESS__!());
+  const settled = () => expect.poll(async () => (await state()).assetsReady, { timeout: process.env.CI ? 45000 : 20000 }).toBe(true);
+  await settled(); const original = await state();
+  expect(original.streetscape.trees).toBeGreaterThanOrEqual(5);
+  expect(original.streetscape.people).toBeGreaterThanOrEqual(10);
+  expect(original.streetscape.cars).toBeGreaterThanOrEqual(2);
+  expect(original.streetscape.billboards).toBeGreaterThanOrEqual(1);
+  expect(new Set(original.contextFinishes.filter(m => m[0] === 'context-facade').map(m => m[1])).size).toBeGreaterThanOrEqual(3);
+  const canvas = page.locator('.scene-host canvas');
+  const before = await canvas.screenshot();
+  await page.screenshot({ path: 'artifacts/harness/streetscape-desktop.png' });
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('场景配套', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '图层设置' }).click(); await settled();
+  const hidden = await state(); expect(hidden.streetscape.visible).toBe(false);
+  expect(hidden.visibleTriangles).toBeLessThan(original.visibleTriangles - 1000);
+  expect(hidden.camera).toEqual(original.camera); expect(hidden.contextFinishes).toEqual(original.contextFinishes);
+  expect((await canvas.screenshot()).equals(before)).toBe(false);
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await page.getByRole('button', { name: 'Scene layers', exact: true }).click();
+  await page.getByLabel('Streetscape props', { exact: true }).check();
+  await page.getByRole('button', { name: 'Scene layers', exact: true }).click(); await settled();
+  expect((await state()).visibleTriangles).toBe(original.visibleTriangles);
+  await page.getByRole('button', { name: 'Full source model', exact: true }).click(); await settled();
+  expect((await state()).streetscape.visible).toBe(false);
+  await page.getByRole('button', { name: 'Reset view', exact: true }).click(); await settled();
+  expect((await state()).streetscape.visible).toBe(true);
+  expect((await state()).gpuGeometries).toBe(original.gpuGeometries);
+});

@@ -32,8 +32,12 @@ The previous packaged source included embedded author/license metadata. Previous
 | leaves-alpha.png | Same asset, 1K leaf alpha atlas | https://dl.polyhaven.org/file/ph-assets/Models/png/1k/tree_small_02/tree_small_02_leaves_alpha_1k.png | CC0 |
 | night-city.hdr | [Poly Haven dresden_station_night](https://polyhaven.com/a/dresden_station_night), 1K HDR | https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/dresden_station_night_1k.hdr | CC0 |
 
-Poly Haven license reference: https://docs.polyhaven.com/en/faq . Files retrieved 2026-10-12 from the asset download links provided by the official API. No high-poly tree model is included. The leaf atlases are retained as historical asset credits but are no longer loaded/rendered after restoring source site geometry. The HDR remains lighting only. All runtime asset paths use the configured Vite base, including GitHub Pages repository URLs.
+Poly Haven license reference: https://docs.polyhaven.com/en/faq . Files retrieved 2026-10-12 from the asset download links provided by the official API. No high-poly tree model is included. The leaf atlases are reused by the user-authorized optional streetscape proposal (2026-10-16); it adds props on source terrain and does not replace source site geometry. The HDR remains lighting only. All runtime asset paths use the configured Vite base, including GitHub Pages repository URLs.
 
 ## 原创医院方案（2026-10-14）
 
 `src/hospitalDesign.ts`根据用户提供白模立面生成可关闭的原创幕墙框、遮阳翼、层间带、静态灯带和门厅雨棚。窗内层次、玻璃粗糙度和珠白面板纹理均由本项目生成，不使用图库付费模型、商家渲染图或第三方医院资产。新增构件是用户授权的外观设计，不是竣工或实测几何；原始主体/周边GLB及共享校准保持不变。图层设置关闭“原创医院方案”可回看既有源形体与材质方案；内部布局仍为未核实示意。
+
+## Hospital billboard image
+
+`hospital-billboard.png`: AI-generated in this project on 2026-10-16 using the built-in imagegen tool. Text-free conceptual hospital atrium advertising imagery, not the real project interior, a supplied architectural asset or an endorsement. Generic figures and setting; no hospital name or external logo. Scene placements and associated trees/people/cars are illustrative proposals. Existing leaf texture credits and CC0 provenance above remain unchanged.

@@ -16,6 +16,7 @@ export class SceneAtmosphere {
   sunStrength = 0;
   moonStrength = 0;
   preview = false;
+  private referenceStyle = true;
   private canvas = document.createElement('canvas');
   private key = '';
   private rain: THREE.LineSegments;
@@ -37,15 +38,15 @@ export class SceneAtmosphere {
     this.rain.frustumCulled = this.snow.frustumCulled = false;
     this.group.name = '天气展示效果'; this.group.add(this.rain, this.snow); this.group.visible = false;
   }
-  update(weather: WeatherReading | undefined, now: Date, enabled: boolean, preview = false) {
+  update(weather: WeatherReading | undefined, now: Date, enabled: boolean, preview = false, referenceStyle = true) {
     preview = enabled && preview;
     const day = enabled ? preview ? .85 : daylight(weather, now) : 0;
     const cloud = enabled && !preview ? Math.max(weather?.code === 3 ? .8 : 0, Math.round((weather?.cloud || 0) / 10) / 10) : 0;
     const kind = enabled && weather && !preview ? weatherKind(weather.code) : 'clear';
     const wet = enabled && !preview && !!weather && (weather.precipitation > 0 || ['rain', 'snow', 'storm'].includes(kind));
-    const key = [enabled, preview, day, cloud, kind, wet].join('/');
+    const key = [enabled, preview, referenceStyle, day, cloud, kind, wet].join('/');
     if (key === this.key) return false;
-    this.key = key; this.profile = { day, cloud, kind, wet }; this.preview = preview;
+    this.key = key; this.profile = { day, cloud, kind, wet }; this.preview = preview; this.referenceStyle = referenceStyle;
     // Low illustrative sky placement keeps default day/night effects in view.
     // It is not a surveyed solar direction, astronomical position or lunar phase.
     this.sunDirection.set(.84, .15, -.54).normalize();
@@ -78,8 +79,8 @@ export class SceneAtmosphere {
   private drawSky(day: number, cloud: number, kind: string) {
     const context = this.canvas.getContext('2d')!;
     const overcast = cloud > .65 || ['rain', 'fog', 'storm', 'snow'].includes(kind);
-    const top = new THREE.Color(0x061a32).lerp(new THREE.Color(overcast ? 0x52687c : 0x28699f), day);
-    const horizon = new THREE.Color(0x234364).lerp(new THREE.Color(overcast ? 0xb0bcc5 : 0x91bddc), day);
+    const top = this.referenceStyle ? new THREE.Color(0x426c9b).lerp(new THREE.Color(overcast ? 0x335e8f : 0x206099), day) : new THREE.Color(0x061a32).lerp(new THREE.Color(overcast ? 0x52687c : 0x28699f), day);
+    const horizon = this.referenceStyle ? new THREE.Color(0x375985).lerp(new THREE.Color(overcast ? 0x244b78 : 0x0d3c6b), day) : new THREE.Color(0x234364).lerp(new THREE.Color(overcast ? 0xb0bcc5 : 0x91bddc), day);
     const ground = new THREE.Color(0x0a1724).lerp(new THREE.Color(0x526b7d), day);
     const gradient = context.createLinearGradient(0, 0, 0, 1024);
     gradient.addColorStop(0, '#' + top.getHexString()); gradient.addColorStop(.52, '#' + horizon.getHexString()); gradient.addColorStop(1, '#' + ground.getHexString());

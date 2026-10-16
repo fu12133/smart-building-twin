@@ -8,7 +8,7 @@ test('production assets and model interactions work under repository URL', async
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('response', r => { if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`); });
-  const assets = ['night-city.hdr', 'project-context.glb', 'project-hospital.glb'];
+  const assets = ['night-city.hdr', 'project-context.glb', 'project-hospital.glb', 'hospital-billboard.png'];
   const assetResponses = Promise.all(assets.map(name => page.waitForResponse(r => r.url() === new URL('assets/' + name, baseURL!).href)));
   const weatherResponse = page.waitForResponse(r => r.url().startsWith('https://api.open-meteo.com/v1/forecast?'));
   await page.goto(baseURL!);
@@ -39,6 +39,16 @@ test('production assets and model interactions work under repository URL', async
   await expect(page.getByLabel('北京时间')).toBeVisible();
   await page.getByRole('button', { name: '关闭天气详情' }).click();
   await expect(page.locator('.scene-info')).toContainText('原创现代医院');
+  await expect(page.locator('.scene-info')).toContainText('树木、人物、车辆、广告牌');
+  const propsImage = createHash('sha256').update(await canvas.screenshot()).digest('hex');
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('场景配套', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.waitForTimeout(750);
+  expect(createHash('sha256').update(await canvas.screenshot()).digest('hex')).not.toBe(propsImage);
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('场景配套', { exact: true }).check();
+  await page.getByRole('button', { name: '图层设置' }).click();
   const proposalImage = createHash('sha256').update(await canvas.screenshot()).digest('hex');
   await page.getByRole('button', { name: '图层设置' }).click();
   await page.getByLabel('原创医院方案', { exact: true }).uncheck();

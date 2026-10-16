@@ -105,7 +105,7 @@ test('E1: hospital has rendered visual emphasis and context finishes restore exa
       return sum / (pixels.length / 4);
     };
     // Inspected default source tower and central context facades, with HUD hidden.
-    return { hospital: mean(.57, .2, .07, .45), context: mean(.34, .22, .10, .32) };
+    return { hospital: mean(.37, .2, .07, .45), context: mean(.14, .22, .10, .32) };
   }, png.toString('base64'));
   expect(contrast.hospital).toBeGreaterThan(contrast.context * 1.6);
   await page.screenshot({ path: 'artifacts/harness/hospital-emphasis-night.png' });

@@ -1,72 +1,13 @@
-# 内部楼层参考实现 QA
+# Hospital visual style QA — 2026-10-16
 
-## 视觉真源与证据
+Scope: follow the supplied blue architectural dashboard style and color hierarchy while preserving the user's actual hospital, source site and source city geometry. This is not a pixel-identical reconstruction of the unrelated reference tower. Proposed finishes, props and billboard imagery remain identified.
 
-- 用户真源：`codex-clipboard-179f2aa0-5d32-40c4-ab00-3273a635145a.png`，原始文件位于用户提供的 Windows 临时目录；3173×1543 像素。
-- 实际浏览器：Codex 内置浏览器，本地 `http://127.0.0.1:4187/`，2048×996 CSS 视口。实际截图 `artifacts/design/interior-final.jpg` 为 2048×996 像素；像素密度 1:1。真源等比缩至 2048×996 后比较，未非等比拉伸楼板或核心筒。
-- 状态：A区 2F、2.5D、全部系统、设备图层开启；详情图 `artifacts/design/interior-detail.jpg` 选中通道摄像机。
-- 已实际打开联合输入 `artifacts/design/comparison-full.jpg`、`comparison-floor.jpg`、`comparison-cards.jpg`、`comparison-history.jpg`，分别检查完整构图、楼板/核心筒、设备卡片/楼层条及修正前后。对照文件包含原始参考画面，仅本地保存；实现截图保留在仓库。
-- 390/768 响应式截图：`artifacts/harness/interior-390.png`、`interior-768.png`，由真实页面控件验收生成并检查。
+Reference: supplied 1378×649 screenshot; video contact sheet checked at 0/8/16/24/32/40 seconds. Private reference/comparison images remain in ignored artifacts/ci, not published assets.
 
-## 发现与修正历史
+Comparison method: source and implementation were combined into the same image at aligned 1378×649 dimensions and visually inspected. Initial comparison `reference-style-final-comparison.png` found a P1: the tower was too small and the full-width KPI strip competed with it. Corrected desktop FOV/target, slimmed the header, and made summary metrics opt-in for the desktop exterior. Floor/mobile layouts retain centered framing and metrics.
 
-1. [P2，已修正] 首轮楼板在中央可用区域偏小、上方空隙较大。证据 `interior-before-framing.jpg`。调整楼层默认相机距离、目标中心和窄屏适配系数；`interior-final.jpg` / `comparison-full.jpg` 显示楼板占据中央区域且不遮挡底部选择器。
-2. [P2，已修正] 白墙与灰楼板的接触处缺少参考图中的柔和深度。证据 `interior-before-ao.jpg` / `comparison-history.jpg`。添加仅在楼层启用、半分辨率 8 样本的真实 SSAO；附加实体楼板边缘层次。修正后墙脚、楼梯与外墙内缘具有接触阴影，模型保留真实几何和旋转。
-3. [P2，已修正] 首次进入时低层选中项可能落在楼层条可视区域以外。为选中项增加条内滚动同步；F1 通过页面控件验证初始 2F 在视口内、18F→B区自动夹到6F，以及地下层切换。
-4. [P2，已修正] 768像素下楼层条与相机按钮叠在同列；1440/768截图中楼板边缘被面板遮住。修正前证据 `interior-before-768.png` / `interior-before-1440.png`。按中央实际可用宽度适配相机，平板楼层场景独占首行，将缩放控件与楼层条分列；F3增加实际18F点击及控件矩形不重叠检查。修正后截图 `interior-768.png` / `interior-desktop.png`。
+Post-fix comparison: `artifacts/ci/reference-style-post-framing-comparison.png`, inspected with both source and implementation visible. The main tower now dominates the left/central composition, the warm podium and foreground props remain visible, and two deep-blue translucent data columns occupy the right. Cyan values, diamond navigation, muted differentiated context buildings, warm/cool facade lights and blue glass follow the selected visual direction. The moon is subordinate. No remaining blocking layout discrepancy in this scoped comparison. This is a visual review, not proof of identical architecture or photorealistic reproduction.
 
-## 五项保真检查
+Intentional differences: source hospital massing and calibration; existing hospital dashboard content/brand/header; real weather/time and bilingual controls; schematic business data. Do not stretch the source model or invent clinical allocations to match the commercial-building reference.
 
-- 字体：沿用项目中文无衬线与 Microsoft YaHei 回退，卡片标题和数值具有明确层级。参考来源标题更大、更粗；现有仪表盘的紧凑排版是保留既有设计系统的选择，未截断中文标签。
-- 布局：灰色开放楼板、圆角白色外墙、均布柱、双侧楼梯/中央通道核心筒、青色圆形设备点均已实现。保留既有顶栏、指标和导航；用户请求为内部设计，不将参考图60层及业务菜单搬入本项目。
-- 色彩：深蓝底、白灰几何、青色点位和蓝色统计圆环与参考方向一致。抽样开放楼板像素：参考 RGB(135,139,140)，实现 RGB(115,119,120)，实现稍深以保持白墙对比，属于可接受方案差异。告警用小暖色状态点补充青色系统图标。
-- 图像/资产：楼板、墙柱、核心筒、楼梯、点位箭头均为 Three.js 实体；图标采用已有 Lucide 库。未使用截图或 CSS 旋转替代三维。相对参考有简化的核心筒隔间与较薄底部叠层，因为缺少实际室内图纸；均为方案示意。SSAO 有轻微采样纹理，作为性能与画质之间的 P3 后续优化。
-- 文案：所有新增界面文案为中文，真实楼层上限18/6及B1/B2，13/14保留功能清晰。设备卡片报告六个示意点位，不复制参考中的705等实际台账数字。内部方案、数据演示状态、未经校准的室内布局均明确可见，没有医院名称或实际临床功能分配。
-
-## 交互与浏览器检查
-
-内置浏览器实际切换2.5D、选择摄像机筛选/点位及查看详情，截图与页面状态一致；控制台无 error。原有 Three.js 已弃用软阴影类型的警告改为当前 PCFShadowMap，保持原有运行时实际使用的阴影类型。Harness 另通过真实拖拽、滚轮、返回3D的精确姿态恢复、设备图层叠加分类、告警取消不兼容筛选和窄屏操作验证。
-
-内置浏览器另实际拖拽开放楼板并复位，`artifacts/design/interior-rotated.jpg` 已捕获且打开检查：外墙、柱、两侧楼梯和电梯房呈现不同透视，设备点跟随世界坐标；无控制台 error。768视口中也实际点击顶部18F并检查按钮无遮挡。
-
-## 可接受的边界与后续优化
-
-实际医院名称、室内 CAD/BIM 与设备清单尚未提供，当前白色核心筒不代表本院已核实布局。保留原有外层仪表盘、用六类可点击卡片代替参考中更宽的分类列是有意调整。后续实际图纸可校准核心筒与每层隔间；较高质量 AO 可在设备性能确认后提高采样数。
-
-无未解决的 P0/P1/P2 项。
-
-Final result: passed
-
-## 2026-10-12 各楼层独立方案复查
-
-新增需求为每层布局不同。继续保留参考的灰色楼板、白色实体隔墙/核心筒和青色设备点。塔楼和裙房使用各自上下对齐的核心筒，外围分区、隔墙、门洞和走廊按层变化，地下为独立开放/设备分区方案；没有分配未经核实的临床科室。
-
-已打开检查 `artifacts/harness/layout-A-1.png`、`layout-A-18.png`、`layout-B-6.png`、`layout-B--2.png` 和手机 `interior-390.png`：不同房间数量和跨度清楚可见，隔墙保留门洞，白墙与灰地面保持接触阴影；楼板位于中央可用区域，设备点、楼层条、底部选择器没有被面板遮挡。为较宽的裙房增加统一相机留白，切换楼层仍保留当前观察姿态。
-
-F4 通过页面分区/楼层选择器逐一访问28个上下文，仅在截图时隐藏文字/操作面板叠层，比较实际绘制的三维几何画面；28个哈希不同，返回A区1F后几何画面完全一致，GPU几何数量回到原值，DOM只保留6个当前点位。F5验证摄像机详情从1F西侧分区1更新到2F西侧分区2，以及跨层告警定位与筛选重置。F2/F3/F4/F5 专项 **5/5 passed（41.0秒）**，无浏览器error。
-
-首次专项测试捕获楼层重建时嵌套React图标root同步卸载的错误；已将root卸载延后到当前提交之后的微任务，旧DOM/监听器及GPU资源仍立即释放。重新运行所有专项后错误为零，没有放宽错误断言。
-
-内部房间划分仍为方案示意，实际每层室内CAD/BIM尚未提供。此版本没有已发现的未解决P0/P1/P2问题。Final result: passed.
-
-完整验收后又打开检查A区2F、B区B1和768平板截图；六张代表楼层及两个窄屏截图均检查完成。公网已部署6c57c3a；生产harness1/1（23.0秒）通过，公网13F截图`interior-online.png`已检查，分区、六点位和控件完整。完整本地23/23、云端23/23均无浏览器错误。
-
-## 2026-10-14 原白模周边与主体核对
-
-最新请求为周边恢复以及医院按白模形体还原。已检查`source-context-default.png`/`source-context-full.png`和768/390全景：源近邻建筑、城市、完整圆形场地边界及局部场地分区清晰可见；相对位置保留，未用原程序方块或地面替代。完整白模控制与复位可操作，平板场景独占首行，手机无横向溢出。全景下远处内容需要缩放后看细节，属于真实场景尺度差异。
-
-主体原始GLB2783三角形及哈希保持；源1445面审计无有效面遗漏。运行时外加幕墙、入口/雨棚和景观已移除。原生RTX5090/ANGLE D3D11默认、滚轮近景、指针拖拽反向三张`architecture-*.png`及`source-hospital-isolated.png`均打开检查：主体塔楼/围合裙房形体可见、透视随操作变化；实际近邻楼挡住部分后视角时，可用图层关闭周边而单独核对主体。材质仍为方案，不将没有实景图片依据的窗格/材质称为实景复原。
-
-严格规格4/4、本地完整30/30（2.6分钟）、生产子路径1/1（16.7秒）均通过，无浏览器error。新来源/全景/图层/晚到与失败资产/窄屏/周边实际拾取7/7（29.3秒）通过。四个零面积源面不输出；带孔/自交面保留原边界并作精确交点分割，无扇形填洞。
-
-尺寸按既有资料69.5/205统一校准，DWG标米的205单位与资料矛盾已向用户说明；严格现场尺寸基准、真实材质和室内图纸仍待核准。没有将该版本称为完整实景/实际内部的一比一还原。形体与交互范围内无已发现的未解决P0/P1/P2。Final result: passed for source-shape scope.
-
-运行源码af98732已发布，云端30/30（14.7分钟）。公网生产最终1/1（37.1秒），三项资产200、无浏览器error；公网默认与完整源范围截图已打开检查，主体及源城市/场地保持，完整白模的源圆形边界可见。初始化等待调整只影响生产测试脚本，不改变运行代码。
-
-## 2026-10-14 照明、玻璃与深圳天气 QA
-
-最终本地38/38（3.7分钟）、严格规格5/5、仓库子路径生产1/1（14.1秒）通过。已检查实际晴昼/夜/雨、天气详情768/390、保持白墙剖切的楼层截图，以及RTX5090默认/近景/主体反向。夜景重点暖光、基部洗墙与地面光斑可见；源玻璃物理反射/高光随真实旋转变化，源主体/城市/场地没有新增建筑造型。日间天光/反射变亮，夜间恢复暖窗，雨滴与雾没有覆盖楼层。
-
-天气详情清楚显示深圳、气温、模型来源/数据时刻和非现场实测，手机仍可看时间、打开/刷新/关闭天气，无横向溢出。`weather-day/night/rain/floor/768/390.png`来自可控验收数据，不是当天真实天气；`weather-live-local.png`实际API当前数据为18:15/25.8°C。天空缓存与软件提交积压在中间版本发现后修复；最终全部用例与真实API验证通过。公网页面尚待部署验收，不提前声明上线。
-
-公网运行c293106已部署，成功CI严格规格5/5、Linux Chromium/SwiftShader38/38（7.3分钟）；实际公网生产1/1（最终17.6秒），在线深圳模型天气25.7°C/18:30与UI对应，三项场景资产200、无浏览器/HTTP错误。最终天气详情、默认与完整白模截图已打开检查，默认视角在软件队列呈现后取样。运行几何/比例保留，材质与灯光为展示方案。Final result: passed for the requested illumination/glazing/weather demonstration scope.
+Focused final-framing checks passed 6/6: source pointer picks, context occlusion, rendered subject contrast and exact context restoration, desktop columns/palette/floor projection, optional real 3D props/material colors, sunlight preview. Earlier complete 56/56 passed before the framing correction. Final full regression, day/mobile captures, production and deployment results must be recorded in docs/verification.md before release is called complete.

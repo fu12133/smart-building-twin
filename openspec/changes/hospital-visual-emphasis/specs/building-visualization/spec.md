@@ -1,5 +1,16 @@
 ## ADDED Requirements
 
+### Requirement: Illustrative hospital streetscape
+The optional hospital proposal MUST include real 3D trees, people, vehicles and facade billboards, with varied subdued context finishes. Props MUST use original site heights, avoid source building volumes, and preserve source geometry and calibration. Placement and AI-generated advertisement imagery MUST be identified as illustrative in both languages. Source/full-source views MUST hide additions and restore original context finishes; owned resources MUST be disposed.
+
+#### Scenario: Inspect trees, people, vehicles and advertising
+- **WHEN** a visitor opens or rotates the hospital proposal
+- **THEN** trees, human figures, cars and image-based facade advertising are visible as real scene objects, with varied surrounding finishes and no replacement of source roads/buildings
+
+#### Scenario: Hide additions and retain source
+- **WHEN** the visitor turns off the proposal, opens full-source context or enters a floor
+- **THEN** added props and advertising disappear, original geometry stays intact, and returning restores the chosen presentation without resource growth or late-loaded attachment to disposed scenes
+
 ### Requirement: Hospital visual hierarchy
 The default hospital proposal MUST emphasize the source hospital through closer framing, reflective glazing, legible facade illumination and subdued source surroundings. Source geometry/calibration MUST remain intact. Proposal-off and full-source context MUST restore existing context finishes. Weather, sun/moon, floor illumination, user camera state and bilingual notices MUST remain usable. Styling MUST NOT be described as verified one-to-one reconstruction.
 

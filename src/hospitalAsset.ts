@@ -13,8 +13,10 @@ export class HospitalAsset {
   private design?: HospitalDesign;
   private originalProposal = true;
   get proposalDetails() { return this.design?.detailCount ?? 0; }
+  get assetsReady() { return this.ready && !!this.design?.assetsReady; }
+  get billboardCount() { return this.design?.billboardCount ?? 0; }
 
-  constructor(url: string, private onLoad: () => void, private onError: () => void) {
+  constructor(url: string, private onLoad: () => void, private onError: () => void, invalidate: () => void = () => {}) {
     new GLTFLoader().load(url, asset => {
       if (this.disposed) { HospitalAsset.release(asset.scene); return; }
       const model = asset.scene;
@@ -66,7 +68,7 @@ export class HospitalAsset {
       model.traverse(object => {
         if (object instanceof THREE.Mesh) { object.castShadow = true; object.receiveShadow = true; }
       });
-      this.design = new HospitalDesign(model);
+      this.design = new HospitalDesign(model, invalidate);
       this.design.setEnabled(this.originalProposal);
       // The conversion already calibrates source geometry uniformly; never normalize it again.
       const center = original.getCenter(new THREE.Vector3());
@@ -135,6 +137,7 @@ export class HospitalAsset {
   }
 
   setProposal(enabled: boolean) { this.originalProposal = enabled; this.design?.setEnabled(enabled); this.setDaylight(this.day); }
+  setStreetscape(enabled: boolean) { this.design?.setStreetscape(enabled); }
 
   private static visibleBounds(root: THREE.Object3D) {
     const bounds = new THREE.Box3();

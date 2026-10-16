@@ -18,23 +18,35 @@ export class HospitalDesign {
   private glow: THREE.MeshStandardMaterial;
   private aluminium: THREE.MeshStandardMaterial;
   private porcelain: THREE.MeshStandardMaterial;
+  private screenGeometry = new THREE.PlaneGeometry(5.6, 2.8);
+  private disposed = false;
+  private advertPending = true;
+  private advertising = new THREE.Group();
+  get assetsReady() { return !this.advertPending; }
+  readonly billboardCount: number;
   readonly detailCount: number;
 
-  constructor(model: THREE.Object3D) {
+  constructor(model: THREE.Object3D, invalidate: () => void = () => {}) {
     this.root.name = '原创现代医院外观方案'; this.root.userData.originalProposal = true;
     const maps = this.windows();
     this.glass = new THREE.MeshPhysicalMaterial({ name: 'original-hospital-glass', color: 0xffffff,
       map: maps.color, emissiveMap: maps.light, emissive: 0xffd8a4, emissiveIntensity: 1.1,
       roughness: .09, roughnessMap: maps.rough, metalness: .12, ior: 1.5,
       clearcoat: 1, clearcoatRoughness: .06, envMapIntensity: 8, side: THREE.DoubleSide });
-    this.pearl = new THREE.MeshStandardMaterial({ name: 'original-hospital-pearl', color: 0xe4e7e1,
+    this.pearl = new THREE.MeshStandardMaterial({ name: 'original-hospital-pearl', color: 0xe7d9b9,
       map: this.panels(), roughness: .48, metalness: .12, side: THREE.DoubleSide });
-    const aluminium = this.aluminium = new THREE.MeshStandardMaterial({ color: 0xd4e3e6, emissive: 0xb9dfed, roughness: .21, metalness: .55 });
-    const porcelain = this.porcelain = new THREE.MeshStandardMaterial({ color: 0xe9efed, emissive: 0xd8f0ff, roughness: .26, metalness: .24 });
-    this.pearl.emissive.set(0xffe6bd);
+    const aluminium = this.aluminium = new THREE.MeshStandardMaterial({ color: 0xd4e3e6, emissive: 0xd6e5ed, roughness: .21, metalness: .55 });
+    const porcelain = this.porcelain = new THREE.MeshStandardMaterial({ color: 0xe9efed, emissive: 0xfff2db, roughness: .26, metalness: .24 });
+    this.pearl.emissive.set(0xffd38a);
     this.glow = new THREE.MeshStandardMaterial({ color: 0xe7ce9f, emissive: 0xffd5a0, emissiveIntensity: 1.6, roughness: .45 });
     const blue = new THREE.MeshStandardMaterial({ color: 0x168f9c, metalness: .4, roughness: .25 });
     this.materials.push(this.glass, this.pearl, aluminium, porcelain, this.glow, blue);
+    const ad = new THREE.TextureLoader().load(import.meta.env.BASE_URL + 'assets/hospital-billboard.png', texture => {
+      if (this.disposed) { texture.dispose(); return; }
+      this.advertPending = false; invalidate();
+    }, undefined, () => { if (!this.disposed) { this.advertPending = false; invalidate(); } });
+    ad.colorSpace = THREE.SRGBColorSpace; ad.anisotropy = 4; this.textures.push(ad);
+    const screen = new THREE.MeshBasicMaterial({ map: ad, toneMapped: false }); this.materials.push(screen);
     const faces = new Map<string, Face>();
     model.updateMatrixWorld(true);
     model.traverse(object => {
@@ -97,6 +109,28 @@ export class HospitalDesign {
     }
     this.batch(frames, aluminium); this.batch(bands, this.pearl); this.batch(fins, porcelain); this.batch(lights, this.glow);
     if (entry) this.entrance(entry.face, (entry.from + entry.to) / 2, aluminium, blue, porcelain);
+    const advertisements: { face: Face; center: number; y: number; score: number }[] = [];
+    for (const face of faces.values()) {
+      if (face.zone !== 'B') continue;
+      const ys = face.triangles.flat().map(p => p[1]), min = Math.min(...ys), max = Math.max(...ys), y = Math.min(6, max - 1.6);
+      if (min > 2.3 || y - 1.45 < min) continue;
+      for (const [from, to] of this.intervals(face.triangles, 1, y)) {
+        if (to - from < 7) continue;
+        const center = (from + to) / 2;
+        if (![y - 1.45, y + 1.45].every(level => this.intervals(face.triangles, 1, level).some(([a, b]) => a <= center - 2.9 && b >= center + 2.9))) continue;
+        advertisements.push({ face, center, y, score: face.n.dot(new THREE.Vector3(-.84, 0, .54)) + Math.min(to - from, 20) / 100 });
+      }
+    }
+    const chosen = advertisements.sort((a, b) => b.score - a.score).slice(0, 3);
+    for (const { face, center, y } of chosen) {
+      const board = new THREE.Group(); board.userData = { building: 'B', originalProposal: true, billboard: true };
+      board.position.copy(face.u).multiplyScalar(center).addScaledVector(face.n, face.distance + .35); board.position.y = y;
+      board.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(face.u, new THREE.Vector3(0, 1, 0), face.n));
+      const frame = new THREE.Mesh(this.unit, aluminium); frame.scale.set(5.85, 3.05, .14); board.add(frame);
+      const image = new THREE.Mesh(this.screenGeometry, screen); image.position.z = .08; board.add(image); this.advertising.add(board);
+    }
+    this.root.add(this.advertising);
+    this.billboardCount = chosen.length;
     this.detailCount = frames.length + bands.length + fins.length + lights.length;
     model.add(this.root); this.setEnabled(true);
   }
@@ -199,18 +233,20 @@ export class HospitalDesign {
   setEnabled(enabled: boolean) {
     this.root.visible = enabled; this.surfaces.forEach(s => { s.mesh.material = enabled ? s.design : s.source; });
   }
+  setStreetscape(enabled: boolean) { this.advertising.visible = enabled; }
   setDaylight(day: number) {
     this.glass.emissiveIntensity = THREE.MathUtils.lerp(2.1, .19, day);
     this.glow.emissiveIntensity = THREE.MathUtils.lerp(2.8, .3, day);
     this.aluminium.emissiveIntensity = THREE.MathUtils.lerp(.65, .09, day);
     this.porcelain.emissiveIntensity = THREE.MathUtils.lerp(.8, .13, day);
-    this.pearl.emissiveIntensity = THREE.MathUtils.lerp(.22, .025, day);
+    this.pearl.emissiveIntensity = THREE.MathUtils.lerp(.28, .06, day);
   }
   dispose() {
+    this.disposed = true;
     // Restore source references so HospitalAsset releases hidden original materials too.
     this.setEnabled(false); this.root.removeFromParent();
     this.root.traverse(object => { if (object instanceof THREE.InstancedMesh) object.dispose(); });
-    this.unit.dispose(); this.textures.forEach(t => t.dispose()); this.materials.forEach(m => m.dispose());
+    this.unit.dispose(); this.screenGeometry.dispose(); this.textures.forEach(t => t.dispose()); this.materials.forEach(m => m.dispose());
     this.root.clear(); this.surfaces = [];
   }
 }

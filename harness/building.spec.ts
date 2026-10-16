@@ -308,13 +308,14 @@ test('W3: source tower and podium meshes select their own zones through pointer 
   // Isolate source-zone picking; C6 separately verifies that context blocks picks behind it.
   await page.getByRole('button', { name: '图层设置' }).click();
   await page.getByLabel('周边建筑', { exact: true }).uncheck();
+  await page.getByLabel('原创医院方案', { exact: true }).uncheck();
   await page.getByRole('button', { name: '图层设置' }).click();
   const canvas = page.locator('.scene-host canvas'), rect = (await canvas.boundingBox())!;
   await page.getByRole('button', { name: '选择B区' }).click();
   // Inspected default view: tower glass and podium roof, away from floating labels/overlays.
-  await canvas.click({ position: { x: rect.width * .63, y: rect.height * .4 } });
+  await canvas.click({ position: { x: rect.width * .43, y: rect.height * .4 } });
   await expect(page.locator('.building-name')).toContainText('A区 · 塔楼');
-  await canvas.click({ position: { x: rect.width * .48, y: rect.height * .73 } });
+  await canvas.click({ position: { x: rect.width * .28, y: rect.height * .73 } });
   await expect(page.locator('.building-name')).toContainText('B区 · 裙房');
 });
 
@@ -546,7 +547,7 @@ test('C6: source context clicks never select hospital zones behind surrounding g
   await page.getByRole('button', { name: '选择B区' }).click();
   const canvas = page.locator('.scene-host canvas'), rect = (await canvas.boundingBox())!;
   // Visually inspected source-context-default.png: central nearby facade, no UI overlay.
-  const point = { x: 690-rect.x, y: 420-rect.y };
+  const point = { x: 690-rect.x-rect.width * .2, y: 420-rect.y };
   await canvas.click({ position: point });
   expect([263, 575]).toContain((await snapshot(page)).lastPickSourceHandle);
   await expect(page.locator('.building-name')).toContainText('B区 · 裙房');
