@@ -16,19 +16,22 @@ export class HospitalDesign {
   private glass: THREE.MeshPhysicalMaterial;
   private pearl: THREE.MeshStandardMaterial;
   private glow: THREE.MeshStandardMaterial;
+  private aluminium: THREE.MeshStandardMaterial;
+  private porcelain: THREE.MeshStandardMaterial;
   readonly detailCount: number;
 
   constructor(model: THREE.Object3D) {
     this.root.name = '原创现代医院外观方案'; this.root.userData.originalProposal = true;
     const maps = this.windows();
     this.glass = new THREE.MeshPhysicalMaterial({ name: 'original-hospital-glass', color: 0xffffff,
-      map: maps.color, emissiveMap: maps.light, emissive: 0xffffff, emissiveIntensity: 1.1,
-      roughness: .13, roughnessMap: maps.rough, metalness: .12, ior: 1.5,
+      map: maps.color, emissiveMap: maps.light, emissive: 0xffd8a4, emissiveIntensity: 1.1,
+      roughness: .09, roughnessMap: maps.rough, metalness: .12, ior: 1.5,
       clearcoat: 1, clearcoatRoughness: .06, envMapIntensity: 8, side: THREE.DoubleSide });
     this.pearl = new THREE.MeshStandardMaterial({ name: 'original-hospital-pearl', color: 0xe4e7e1,
       map: this.panels(), roughness: .48, metalness: .12, side: THREE.DoubleSide });
-    const aluminium = new THREE.MeshStandardMaterial({ color: 0xa5bac2, roughness: .24, metalness: .78 });
-    const porcelain = new THREE.MeshStandardMaterial({ color: 0xe9efed, roughness: .3, metalness: .24 });
+    const aluminium = this.aluminium = new THREE.MeshStandardMaterial({ color: 0xd4e3e6, emissive: 0xb9dfed, roughness: .21, metalness: .55 });
+    const porcelain = this.porcelain = new THREE.MeshStandardMaterial({ color: 0xe9efed, emissive: 0xd8f0ff, roughness: .26, metalness: .24 });
+    this.pearl.emissive.set(0xffe6bd);
     this.glow = new THREE.MeshStandardMaterial({ color: 0xe7ce9f, emissive: 0xffd5a0, emissiveIntensity: 1.6, roughness: .45 });
     const blue = new THREE.MeshStandardMaterial({ color: 0x168f9c, metalness: .4, roughness: .25 });
     this.materials.push(this.glass, this.pearl, aluminium, porcelain, this.glow, blue);
@@ -163,9 +166,9 @@ export class HospitalDesign {
     // Twenty different rows keep illuminated rooms from repeating every four storeys.
     [c, e, r].forEach(ctx => ctx.scale(1, .2));
     for (let row = 0; row < 20; row++) for (let col = 0; col < 4; col++) {
-      const x = col * 256, y = row * 512, seed = row * 17 + col * 41, lit = random(seed) > .77;
+      const x = col * 256, y = row * 512, seed = row * 17 + col * 41, lit = random(seed) > .59;
       const window = c.createLinearGradient(x, y, x + 240, y + 450);
-      window.addColorStop(0, '#7a9aa9'); window.addColorStop(.22, '#678795'); window.addColorStop(.7, '#55788d'); window.addColorStop(1, '#62899a');
+      window.addColorStop(0, '#a3c3d1'); window.addColorStop(.22, '#779eaf'); window.addColorStop(.7, '#355e7d'); window.addColorStop(1, '#80b0c1');
       c.fillStyle = window; c.fillRect(x + 5, y + 5, 246, 465);
       if (lit) {
         c.fillStyle = '#b9c6ba'; c.fillRect(x + 40, y + 72, 178, 319);
@@ -197,8 +200,11 @@ export class HospitalDesign {
     this.root.visible = enabled; this.surfaces.forEach(s => { s.mesh.material = enabled ? s.design : s.source; });
   }
   setDaylight(day: number) {
-    this.glass.emissiveIntensity = THREE.MathUtils.lerp(1.1, .07, day);
-    this.glow.emissiveIntensity = THREE.MathUtils.lerp(1.6, .04, day);
+    this.glass.emissiveIntensity = THREE.MathUtils.lerp(2.1, .19, day);
+    this.glow.emissiveIntensity = THREE.MathUtils.lerp(2.8, .3, day);
+    this.aluminium.emissiveIntensity = THREE.MathUtils.lerp(.65, .09, day);
+    this.porcelain.emissiveIntensity = THREE.MathUtils.lerp(.8, .13, day);
+    this.pearl.emissiveIntensity = THREE.MathUtils.lerp(.22, .025, day);
   }
   dispose() {
     // Restore source references so HospitalAsset releases hidden original materials too.

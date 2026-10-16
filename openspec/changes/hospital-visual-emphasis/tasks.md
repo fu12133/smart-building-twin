@@ -1,0 +1,4 @@
+- [x] Inspect supplied references, source contracts and record proposal/scenarios/design.
+- [x] Implement subject framing, facade emphasis and reversible context finish hierarchy.
+- [ ] Inspect screenshots and pass strict specs, build and complete harness.
+- [ ] Deploy, verify public result, record evidence and archive.

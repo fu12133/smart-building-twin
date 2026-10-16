@@ -48,7 +48,7 @@ export class SceneAtmosphere {
     this.key = key; this.profile = { day, cloud, kind, wet }; this.preview = preview;
     // Low illustrative sky placement keeps default day/night effects in view.
     // It is not a surveyed solar direction, astronomical position or lunar phase.
-    this.sunDirection.set(.62, .15, -.78).normalize();
+    this.sunDirection.set(.84, .15, -.54).normalize();
     const transmission = Math.max(.24, 1 - cloud * .7 - (wet || kind === 'fog' ? .12 : 0));
     this.sunStrength = enabled && day > 0 ? transmission : 0;
     this.moonStrength = enabled && day === 0 ? transmission : 0;
@@ -115,20 +115,20 @@ export class SceneAtmosphere {
       const y = (.5 - Math.asin(this.sunDirection.y) / Math.PI) * 1024;
       for (const offset of [-2048, 0, 2048]) {
         const cx = x + offset;
-        const halo = context.createRadialGradient(cx, y, 8, cx, y, 90);
-        halo.addColorStop(0, `rgba(185,215,255,${.35 * this.moonStrength})`);
-        halo.addColorStop(.25, `rgba(148,193,245,${.13 * this.moonStrength})`);
+        const halo = context.createRadialGradient(cx, y, 5, cx, y, 55);
+        halo.addColorStop(0, `rgba(185,215,255,${.24 * this.moonStrength})`);
+        halo.addColorStop(.25, `rgba(148,193,245,${.09 * this.moonStrength})`);
         halo.addColorStop(1, 'rgba(130,180,240,0)');
-        context.fillStyle = halo; context.fillRect(cx - 90, y - 90, 180, 180);
+        context.fillStyle = halo; context.fillRect(cx - 55, y - 55, 110, 110);
         context.save(); context.globalAlpha = .55 + .45 * this.moonStrength;
-        context.beginPath(); context.arc(cx, y, 11, 0, Math.PI * 2); context.clip();
-        const disc = context.createRadialGradient(cx - 4, y - 4, 1, cx, y, 14);
+        context.beginPath(); context.arc(cx, y, 6.5, 0, Math.PI * 2); context.clip();
+        const disc = context.createRadialGradient(cx - 2.5, y - 2.5, .5, cx, y, 8.5);
         disc.addColorStop(0, '#f4f5e7'); disc.addColorStop(.65, '#d8e1e3'); disc.addColorStop(1, '#8398ac');
-        context.fillStyle = disc; context.fillRect(cx - 12, y - 12, 24, 24);
+        context.fillStyle = disc; context.fillRect(cx - 7, y - 7, 14, 14);
         // Deterministic lunar surface detail, explicitly a display design.
         for (let i = 0; i < 19; i++) {
           context.fillStyle = `rgba(91,112,133,${.08 + noise(i + 51) * .16})`;
-          context.beginPath(); context.arc(cx + (noise(i + 8) - .5) * 20, y + (noise(i + 23) - .5) * 20, .6 + noise(i + 39) * 2.4, 0, Math.PI * 2); context.fill();
+          context.beginPath(); context.arc(cx + (noise(i + 8) - .5) * 12, y + (noise(i + 23) - .5) * 12, .4 + noise(i + 39) * 1.4, 0, Math.PI * 2); context.fill();
         }
         context.restore();
       }

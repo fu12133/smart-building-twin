@@ -305,12 +305,16 @@ test('W2: packaged mesh retains traceable source geometry and project calibratio
 
 test('W3: source tower and podium meshes select their own zones through pointer picking', async ({ page }) => {
   await ready(page);
+  // Isolate source-zone picking; C6 separately verifies that context blocks picks behind it.
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('周边建筑', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '图层设置' }).click();
   const canvas = page.locator('.scene-host canvas'), rect = (await canvas.boundingBox())!;
   await page.getByRole('button', { name: '选择B区' }).click();
   // Inspected default view: tower glass and podium roof, away from floating labels/overlays.
   await canvas.click({ position: { x: rect.width * .63, y: rect.height * .4 } });
   await expect(page.locator('.building-name')).toContainText('A区 · 塔楼');
-  await canvas.click({ position: { x: rect.width * .42, y: rect.height * .64 } });
+  await canvas.click({ position: { x: rect.width * .48, y: rect.height * .73 } });
   await expect(page.locator('.building-name')).toContainText('B区 · 裙房');
 });
 

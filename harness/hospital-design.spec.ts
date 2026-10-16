@@ -90,3 +90,41 @@ for (const width of [768, 390]) test(`D3: original proposal control is usable at
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `artifacts/harness/original-hospital-${width}.png`, fullPage: true });
 });
+
+test('E1: hospital has rendered visual emphasis and context finishes restore exactly', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 180000 : 60000);
+  await ready(page); const original = await state(page);
+  const png = await page.locator('.scene-host canvas').screenshot({ style: '.scene-section > :not(.scene-host), .scene-labels, .left-panels, .right-panels { visibility: hidden !important; }' });
+  const contrast = await page.evaluate(async data => {
+    const image = new Image(); image.src = 'data:image/png;base64,' + data; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+    const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+    const mean = (x: number, y: number, w: number, h: number) => {
+      const pixels = context.getImageData(Math.floor(x * image.width), Math.floor(y * image.height), Math.floor(w * image.width), Math.floor(h * image.height)).data;
+      let sum = 0; for (let i = 0; i < pixels.length; i += 4) sum += .2126 * pixels[i] + .7152 * pixels[i + 1] + .0722 * pixels[i + 2];
+      return sum / (pixels.length / 4);
+    };
+    // Inspected default source tower and central context facades, with HUD hidden.
+    return { hospital: mean(.57, .2, .07, .45), context: mean(.34, .22, .10, .32) };
+  }, png.toString('base64'));
+  expect(contrast.hospital).toBeGreaterThan(contrast.context * 1.6);
+  await page.screenshot({ path: 'artifacts/harness/hospital-emphasis-night.png' });
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('原创医院方案', { exact: true }).uncheck();
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
+  const source = await state(page);
+  expect(source.camera).toEqual(original.camera);
+  expect(source.contextFinishes).not.toEqual(original.contextFinishes);
+  await page.getByLabel('原创医院方案', { exact: true }).check();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
+  expect((await state(page)).contextFinishes).toEqual(original.contextFinishes);
+  expect((await state(page)).visibleTriangles).toBe(original.visibleTriangles);
+  await page.getByRole('button', { name: '查看完整白模', exact: true }).click();
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
+  expect((await state(page)).contextFinishes).toEqual(source.contextFinishes);
+  await page.getByRole('button', { name: '复位视角', exact: true }).click();
+  await expect.poll(async () => (await state(page)).assetsReady, { timeout: renderTimeout }).toBe(true);
+  expect((await state(page)).contextFinishes).toEqual(original.contextFinishes);
+  expect((await state(page)).camera).toEqual(original.camera);
+});

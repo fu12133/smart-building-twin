@@ -8,6 +8,10 @@ export class ProjectContextAsset {
   readonly bounds = new THREE.Box3();
   ready = false;
   private disposed = false;
+  private emphasized = false;
+  private buildingMaterials = new Set<THREE.MeshStandardMaterial>();
+  private finishes = new Map<THREE.MeshStandardMaterial, { color: THREE.Color; roughness: number; environment: number; opacity: number; transparent: boolean; depthWrite: boolean }>();
+  get finishState() { return [...this.finishes].map(([material]) => [material.name, material.color.getHexString(), material.roughness, material.envMapIntensity, material.opacity, material.transparent, material.depthWrite]); }
 
   constructor(url: string, onLoad: () => void, onError: () => void) {
     this.buildings.name = '白模周边建筑'; this.ground.name = '白模场地';
@@ -25,6 +29,7 @@ export class ProjectContextAsset {
         const role = mesh.userData.contextRole, building = role === 'city' || role === 'nearby';
         for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
           if (!(material instanceof THREE.MeshStandardMaterial)) continue;
+          if (building) this.buildingMaterials.add(material);
           material.envMapIntensity = .7;
           if (material.name === 'context-facade') {
             material.map = facade; material.color.set('#8997a0');
@@ -47,8 +52,25 @@ export class ProjectContextAsset {
         if (mesh.geometry.boundingBox) this.bounds.union(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld));
       }
       if (this.bounds.isEmpty() || !this.bounds.min.toArray().every(Number.isFinite) || !this.bounds.max.toArray().every(Number.isFinite)) { this.dispose(); onError(); return; }
-      this.ready = true; onLoad();
+      for (const mesh of meshes) for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        if (material instanceof THREE.MeshStandardMaterial && !this.finishes.has(material)) this.finishes.set(material, { color: material.color.clone(), roughness: material.roughness, environment: material.envMapIntensity, opacity: material.opacity, transparent: material.transparent, depthWrite: material.depthWrite });
+      }
+      this.ready = true; this.setEmphasis(this.emphasized); onLoad();
     }, undefined, () => { if (!this.disposed) onError(); });
+  }
+
+  setEmphasis(enabled: boolean) {
+    this.emphasized = enabled;
+    for (const [material, source] of this.finishes) {
+      material.color.copy(source.color).multiplyScalar(enabled ? material.name === 'context-facade' ? .3 : .4 : 1);
+      material.roughness = enabled ? Math.max(.72, source.roughness) : source.roughness;
+      material.envMapIntensity = enabled ? .22 : source.environment;
+      const ghost = enabled && this.buildingMaterials.has(material);
+      const transparent = ghost || source.transparent;
+      if (material.transparent !== transparent) { material.transparent = transparent; material.needsUpdate = true; }
+      material.opacity = ghost ? .32 : source.opacity;
+      material.depthWrite = ghost ? false : source.depthWrite;
+    }
   }
 
   private static facadeTexture() {
@@ -78,6 +100,7 @@ export class ProjectContextAsset {
     this.disposed = true; this.ready = false;
     ProjectContextAsset.release(this.buildings); ProjectContextAsset.release(this.ground);
     this.buildings.clear(); this.ground.clear();
+    this.finishes.clear(); this.buildingMaterials.clear();
   }
   private static release(root: THREE.Object3D) {
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();

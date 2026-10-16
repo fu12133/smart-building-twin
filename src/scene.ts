@@ -206,7 +206,7 @@ export class BuildingScene {
       this.city.add(tower); this.towers.set(b.id, tower);
       const ring = new THREE.Mesh(new THREE.RingGeometry(17, 17.22, 96), new THREE.MeshBasicMaterial({ color: 0x4adcf3, side: THREE.DoubleSide, transparent: true, opacity: .7 }));
       ring.rotation.x = -Math.PI / 2; ring.position.y = .08; tower.add(ring); this.rings.set(b.id, ring);
-      this.addLabel(b.name, new THREE.Vector3(b.x, b.id === 'B' ? 17.5 : 78, b.z), false, () => this.options.onSelect(b.id), 'building-label');
+      this.addLabel(b.name, new THREE.Vector3(b.x, b.id === 'B' ? 17.5 : 64, b.z), false, () => this.options.onSelect(b.id), 'building-label');
       this.labelNodes[this.labelNodes.length - 1].element.dataset.building = b.id;
     }
     this.hospital = new HospitalAsset(import.meta.env.BASE_URL + 'assets/project-hospital.glb', () => {
@@ -218,6 +218,7 @@ export class BuildingScene {
       this.options.onModelLoaded();
     }, () => this.options.onError('医院模型加载失败，请检查网络后重新加载场景。'));
     this.context = new ProjectContextAsset(import.meta.env.BASE_URL + 'assets/project-context.glb', () => {
+      this.setIllumination(this.mode);
       this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
       this.options.onContextLoaded();
     }, () => this.options.onError('白模周边加载失败，请检查网络后重新加载场景。'));
@@ -232,23 +233,26 @@ export class BuildingScene {
     const box = this.hospital.bounds, size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3()), lights = this.hospitalLights;
     lights.name = '医院展示照明';
-    const spot = (color: number, intensity: number, range: number, angle: number, position: number[], target: number[]) => {
+    const spot = (color: number, intensity: number, range: number, angle: number, position: number[], target: number[], heroIntensity = intensity) => {
       const light = new THREE.SpotLight(color, intensity, range, angle, .85, 2);
       light.position.fromArray(position); light.target.position.fromArray(target);
+      light.userData.heroIntensity = heroIntensity;
       // Only the existing key light casts shadows; static washes add no shadow render targets.
       lights.add(light, light.target);
     };
     for (const side of [-1, 1]) {
       spot(0xffd6a0, 3600, size.y * 1.65, .53,
         [center.x + side * size.x * .32, box.min.y + 2, box.max.z + 12],
-        [center.x + side * size.x * .24, box.min.y + size.y * .42, center.z]);
+        [center.x + side * size.x * .24, box.min.y + size.y * .42, center.z], 6000);
     }
     spot(0x8dbdff, 4600, size.y * 1.8, .62,
       [box.max.x + 22, box.min.y + size.y * .65, box.min.z - 18],
-      [center.x, box.min.y + size.y * .46, center.z]);
+      [center.x, box.min.y + size.y * .46, center.z], 8000);
     spot(0xffcc88, 1700, 75, .85,
       [center.x - size.x * .3, box.min.y + 18, box.max.z - 6],
-      [center.x - size.x * .3, box.min.y, box.max.z + 14]);
+      [center.x - size.x * .3, box.min.y, box.max.z + 14], 4800);
+    spot(0xd2eaff, 0, 240, .45, [-70, 110, 105], [18, 40, 8], 28000);
+    spot(0xffddae, 0, 150, .6, [-42, 45, 60], [-10, 12, 0], 12000);
     this.city.add(lights);
   }
   private setIllumination(mode: '3d' | 'floor') {
@@ -271,12 +275,13 @@ export class BuildingScene {
     this.hospitalLights.children.forEach(light => {
       if (light instanceof THREE.SpotLight) {
         light.userData.nightIntensity ??= light.intensity;
-        light.intensity = light.userData.nightIntensity * THREE.MathUtils.lerp(1, .08, day);
+        light.intensity = (this.originalProposal ? light.userData.heroIntensity : light.userData.nightIntensity) * THREE.MathUtils.lerp(1, this.originalProposal ? .28 : .08, day);
       }
     });
     this.hospital?.setDaylight(day);
+    this.context?.setEmphasis(this.originalProposal && !this.contextView);
     this.scene.environment = mode === '3d' && this.weatherEnabled && this.atmosphere.environment ? this.atmosphere.environment.texture : this.environmentTarget.texture;
-    this.scene.environmentIntensity = mode === '3d' ? THREE.MathUtils.lerp(.09, .65, day) : .24;
+    this.scene.environmentIntensity = mode === '3d' ? THREE.MathUtils.lerp(this.originalProposal ? .16 : .09, .65, day) : .24;
     this.bloom.strength = mode === '3d' ? THREE.MathUtils.lerp(.3, .12, day) : .14;
     this.bloom.radius = mode === '3d' ? .32 : .2;
     this.bloom.threshold = mode === '3d' ? THREE.MathUtils.lerp(1.15, 1.65, day) : 1.65;
@@ -382,6 +387,7 @@ export class BuildingScene {
   }
   setProposal(enabled: boolean) {
     this.originalProposal = enabled; this.hospital.setProposal(enabled);
+    this.setIllumination(this.mode);
     this.renderDirty = true; this.renderer.shadowMap.needsUpdate = true;
   }
   setLanguage(language: Language) {
@@ -424,9 +430,9 @@ export class BuildingScene {
     this.controls.enableDamping = false;
     const fit = Math.max(1, Math.min(1.85, 1.05 / this.camera.aspect));
     const floorFit = this.floorFit(), x = innerWidth <= 760 ? 0 : 2; this.fittedFloorScale = floorFit;
-    const exteriorOrbit = new THREE.Spherical(181.7 * fit, this.controls.maxPolarAngle, Math.atan2(-.62, .78));
-    this.camera.position.copy(this.mode === '3d' ? new THREE.Vector3().setFromSpherical(exteriorOrbit).add(new THREE.Vector3(0, 27, 0)) : new THREE.Vector3(x, 50 * floorFit, 44 * floorFit + 3));
-    this.controls.target.set(this.mode === '3d' ? 0 : x, this.mode === '3d' ? 27 : 0, this.mode === '3d' ? 0 : 3); this.controls.update();
+    const exteriorOrbit = new THREE.Spherical(160 * fit, this.controls.maxPolarAngle, Math.atan2(-.84, .54));
+    this.camera.position.copy(this.mode === '3d' ? new THREE.Vector3().setFromSpherical(exteriorOrbit).add(new THREE.Vector3(10, 32, 0)) : new THREE.Vector3(x, 50 * floorFit, 44 * floorFit + 3));
+    this.controls.target.set(this.mode === '3d' ? 10 : x, this.mode === '3d' ? 32 : 0, this.mode === '3d' ? 0 : 3); this.controls.update();
     this.controls.enableDamping = true; this.controls.autoRotate = auto;
   }
   showContext() {
@@ -535,7 +541,7 @@ export class BuildingScene {
     });
     return count;
   }
-  snapshot() { return { moon: { strength: this.atmosphere.moonStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.moonStrength > 0, screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, visibleTriangles: this.visibleTriangles(), sun: { preview: this.atmosphere.preview, strength: this.atmosphere.sunStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.sunStrength > 0, direction: this.atmosphere.sunDirection.toArray(), screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), originalProposal: this.originalProposal, proposalDetails: this.hospital.proposalDetails, mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && this.context.ready && !this.renderDirty }; }
+  snapshot() { return { contextFinishes: this.context.finishState, moon: { strength: this.atmosphere.moonStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.moonStrength > 0, screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, visibleTriangles: this.visibleTriangles(), sun: { preview: this.atmosphere.preview, strength: this.atmosphere.sunStrength, visible: this.mode === '3d' && this.weatherEnabled && this.atmosphere.sunStrength > 0, direction: this.atmosphere.sunDirection.toArray(), screen: this.camera.position.clone().addScaledVector(this.atmosphere.sunDirection, 500).project(this.camera).toArray() }, camera: this.camera.position.toArray(), target: this.controls.target.toArray(), distance: this.camera.position.distanceTo(this.controls.target), originalProposal: this.originalProposal, proposalDetails: this.hospital.proposalDetails, mode: this.mode, auto: this.auto, autoActive: this.controls.autoRotate, selected: this.selected, floor: this.floor, frames: this.frame, objects: this.renderer.info.render.triangles, gpuGeometries: this.renderer.info.memory.geometries, devicesVisible: this.markers.visible, surroundingsVisible: this.surroundings.visible, hospitalReady: this.hospital.ready, contextReady: this.context.ready, lastPickSourceHandle: this.lastPickSourceHandle, contextView: this.contextView, assetsReady: this.hdrSettled && this.architecture.assetsReady && this.hospital.ready && this.context.ready && !this.renderDirty }; }
   dispose() {
     this.destroyed = true; cancelAnimationFrame(this.frameId); this.observer.disconnect(); this.controls.dispose(); this.disposables.forEach(fn => fn());
     this.clearFloor();
