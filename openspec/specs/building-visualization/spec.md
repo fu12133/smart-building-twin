@@ -64,17 +64,19 @@ The hospital scene MUST render the supplied DWG hospital and original surroundin
 - **THEN** proposal preference and saved exterior pose are respected, one renderer remains usable, original assets stay unchanged, and static rendering settles without accumulated resources or errors
 
 ### Requirement: Rendering resource lifecycle
-Scene-owned geometry, materials, textures and reflection targets MUST be disposed on destruction; floor switching and graphics recovery MUST stay usable.
-
-Idle scenes without active precipitation MUST avoid continuous GPU redraws. Camera motion, patrol, resize, atmosphere and layers MUST redraw. Precipitation MAY animate at a bounded rate and MUST stop in floor/full-context views or when weather effects are disabled.
+Scene-owned geometry, materials, textures and reflection targets MUST be disposed on destruction; floor switching and graphics recovery MUST stay usable. Idle scenes without active precipitation, patrol or enabled scene animation MUST avoid continuous GPU redraws. Camera, resize, atmosphere and layers MUST redraw. Precipitation and illustrative scene motion MAY update at bounded rates and MUST stop in their hidden/floor/full-source states.
 
 #### Scenario: Reinitialize after graphics failure
 - **WHEN** graphics recovery reloads the scene
 - **THEN** the detailed model renders again with working controls and no uncaught browser errors
 
 #### Scenario: Idle rendering and renewed interaction
-- **WHEN** the initial scene is stationary without active precipitation and the user subsequently zooms or hides surrounding buildings
-- **THEN** the idle rendered-frame count stays stable, zoom advances rendered frames, and hiding surroundings changes the rendered background
+- **WHEN** scene animation and precipitation are disabled, the view is stationary, and the user subsequently zooms or hides surrounding buildings
+- **THEN** idle rendered-frame count stays stable, zoom advances rendered frames, and hiding surroundings changes the rendered background
+
+#### Scenario: Hide additions and retain source
+- **WHEN** the visitor turns off the proposal, opens full-source context or enters a floor
+- **THEN** added props and advertising disappear, original geometry stays intact, and returning restores the chosen presentation without resource growth or late-loaded attachment to disposed scenes
 
 ### Requirement: Architectural night light hierarchy
 The scene MUST differentiate hospital facade finishes from dimmer source context/site. The original proposal MAY include user-authorized architectural details and static facade/entrance light strips; the source view MUST retain original shape. Glazing MUST respond to actual view direction and neither view may use a screenshot substitute.
@@ -214,3 +216,49 @@ The exterior MUST default to a visible sun and warm sunlight in Shenzhen daytime
 #### Scenario: Default celestial framing
 - **WHEN** a visitor opens the exterior in day or night at desktop, 768 or 390 pixels wide
 - **THEN** the active sun or moon is painted in the Three.js sky in the default view without clicking preview or observation, and bilingual controls/notices remain accessible
+
+### Requirement: Illustrative hospital streetscape
+The optional hospital proposal MUST include real 3D trees, people, vehicles and facade billboards, with varied subdued context finishes. Props MUST use original site heights, avoid source building volumes, and preserve source geometry and calibration. Placement and AI-generated advertisement imagery MUST be identified as illustrative in both languages. Source/full-source views MUST hide additions and restore original context finishes; owned resources MUST be disposed.
+
+#### Scenario: Inspect trees, people, vehicles and advertising
+- **WHEN** a visitor opens or rotates the hospital proposal
+- **THEN** trees, human figures, cars and image-based facade advertising are visible as real scene objects, with varied surrounding finishes and no replacement of source roads/buildings
+
+#### Scenario: Recognizable entrance and upper/lower finish distinction
+- **WHEN** the default proposed hospital exterior is inspected
+- **THEN** exactly one portrait advertising screen is attached beside the recessed proposed entrance, following the supplied entrance crop; tower and podium use distinct finishes, and the podium itself separates pale-gray roof, ivory/beige walls, blue-gray glazing and dark base rather than one uniform color
+- **AND** source/proposal and streetscape controls restore or hide the additions consistently without changing original source buffers
+
+#### Scenario: Continuous podium treatment around tower base
+- **WHEN** the tower base and adjacent podium are inspected together
+- **THEN** the tower's lower source-height zone continues the podium's walls, glazing, frames and horizontal bands, avoiding an unrelated cold-white base; upper tower styling remains distinct and source-mode groups/materials restore exactly
+
+#### Scenario: Readable Shenzhen afternoon
+- **WHEN** real Shenzhen time is in the afternoon before sunset
+- **THEN** the proposal uses a brighter blue sky, daylight ambient/environment lighting and readable site surfaces rather than a night-like dark preset; night remains blue with building lights, and actual time/weather, source mode and floor lighting remain intact
+
+### Requirement: Illustrative entrance motion
+The proposal MUST show one looping advertisement and pedestrians exiting onto source terrain. Motion MUST be labeled illustrative, bounded and pauseable bilingually; hidden/source/floor states and initial reduced motion MUST stop it. Resume and language changes MUST preserve pose/state. BuildingScene MUST own scheduling/disposal. With motion/weather/patrol disabled, GPU draws MUST settle.
+
+#### Scenario: Observe advertisement and exiting pedestrians
+- **WHEN** the default proposal exterior is opened with scene animation enabled
+- **THEN** the single portrait screen changes actual texture frames and real human geometry moves from the doorway along a ground-following route toward the forecourt with a walking gait; no actual footfall feed is claimed
+
+#### Scenario: Pause and preserve state
+- **WHEN** scene animation is paused, the layer/proposal is hidden, source context or a floor is opened, or the scene is disposed
+- **THEN** texture and pedestrian updates stop; resuming the exterior preserves selected preferences and camera, and disposal releases owned resources without a second render loop
+
+### Requirement: Hospital visual hierarchy
+The default hospital proposal MUST emphasize the source hospital through closer framing, reflective glazing, legible facade illumination and subdued source surroundings. Source geometry/calibration MUST remain intact. Proposal-off and full-source context MUST restore existing context finishes. Weather, sun/moon, floor illumination, user camera state and bilingual notices MUST remain usable. Styling MUST NOT be described as verified one-to-one reconstruction.
+
+#### Scenario: Prominent hospital by day and night
+- **WHEN** a visitor opens or resets the hospital view in daytime or at night
+- **THEN** the tower and podium dominate the central composition with clear glazing/frame detail, warmer podium and cooler context, and default sun/moon remain visible without preview clicks
+
+#### Scenario: Restore source context presentation
+- **WHEN** the proposal is disabled or the full-source overview is opened
+- **THEN** context materials restore their exact prior values, source geometry and coordinates stay unchanged, and proposal toggling preserves camera pose
+
+#### Scenario: Responsive interaction and lifecycle
+- **WHEN** a visitor rotates, switches language, enters a floor, returns, or inspects the view at 768/390 pixels
+- **THEN** real pointer interaction and saved pose work, floor lighting stays unchanged, no control overflow occurs, and static lighting settles without continuous GPU redraw or resource growth

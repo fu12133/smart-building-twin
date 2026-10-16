@@ -1,0 +1,4 @@
+- [x] Inspect supplied references, source contracts and record proposal/scenarios/design.
+- [x] Implement subject framing, reversible facade/roof/base finishes, one portrait entrance screen, exit pedestrians, bilingual motion controls and afternoon lighting.
+- [x] Inspect screenshots and pass strict specs, build and complete harness.
+- [x] Deploy, verify public result, record evidence and archive.

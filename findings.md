@@ -95,3 +95,9 @@
 - Poly Haven Tree Small02： https://polyhaven.com/a/tree_small_02 ，CC0，原始约5M三角、4.6m高，页面有LODs标签；高模不可直接大量复制入网页。现项目仅复用其既有叶片贴图，不声称已导入整树。Stone Tile Wall和Sandstone Blocks05是粗糙/风化墙，不直接推荐作本参考的光洁医院大板。
 - Beige Wall001： https://polyhaven.com/a/beige_wall_001 ，CC0光滑米色涂层PBR，含颜色/法线/粗糙度（并非石材）。Kloofendal48d PartlyCloudy PureSky： https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky ，CC0日间HDR，可作通用光照参考，不是深圳实景。API直读403，未下载/导入。
 - Hospital by iagoArt3D仍为约8.4k三角/CC BY备选，形体不同于用户源医院。整套同款开放精模未查到确认来源。保持源白模，不把参考效果图当可下载三维素材。
+- 补查车辆/铺地：Kenney官方CarKit https://kenney.nl/assets/car-kit 与作者itch页 https://kenney-assets.itch.io/car-kit 均核对CC0，OBJ/FBX/glTF，偏低多边形风格，适合远景但不能宣称照片级替换；未下载。ambientCG单素材页读取失败，不把聚合站描述当最终许可核实。Sketchfab StylisedCar描述CC0但页面License是CC Attribution，许可冲突故不列为CC0推荐。McGuire BMW约808622三角/CC BY3.0，需归属及显著减面，不作为现网页直接导入首选。新的第三方素材未进入运行包。
+
+### Sam候选补充实测（不影响运行版）
+- 通过官网明确Download GLB链接成功取得21,013,304字节文件，保存ignored artifacts/ci/candidate-assets/sam-walk.glb，SHA256289dfe56f8d1a51582c681d31a796b0e9cdf6f3684af1461d0feb2c33c648ba8。先前普通页面请求403不是此次明确下载链接的结果。
+- 读取实际glTF：91,610三角、12mesh、13material、10PNG、1skin/1animation。官方网页CC0；文件asset.copyright空，保留官方来源说明。审计JSON在同一ignored目录。
+- 临时独立Three.js预览 artifacts/ci/candidate-assets/preview.html（4187同路径）已通过实际浏览器加载并查看原动画。人物比例比几何占位细致，仍是简化皮肤/衣服，未达到扫描级写实；20MB与面数不适合直接批量复制。未接入医院应用/公开包，未改变源医院、当前发布资产或候选的网页性能限制。
