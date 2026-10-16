@@ -191,3 +191,6 @@ html[lang=en] .building-info .building-details small{display:none}
 @media(max-width:1050px){.metrics-layer{display:none}}
 /* Keep the expanded animation/layer controls reachable on narrow scene panels. */
 .layer-popover{max-height:min(360px,calc(100% - 220px));overflow-y:auto}
+@media(min-width:1051px){
+  .app-shell:not(.floor-mode) .scene-top .mode-switch{top:340px}
+}

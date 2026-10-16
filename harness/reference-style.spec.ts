@@ -202,4 +202,9 @@ test('R5: Shenzhen afternoon has readable daylight ground while night and source
   expect((await state()).camera).toEqual(night.camera); expect((await state()).visibleTriangles).toBe(night.visibleTriangles);
   await expect(page.locator('.clock strong')).toHaveText('16:30:00');
   await page.screenshot({ path: 'artifacts/harness/shenzhen-afternoon.png' });
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await page.getByRole('button', { name: 'Start sunlight preview', exact: true }).click();
+  await page.getByRole('button', { name: 'View the sun', exact: true }).click();
+  expect((await state()).sun.preview).toBe(true);
+  expect((await state()).sun.visible).toBe(true);
 });
