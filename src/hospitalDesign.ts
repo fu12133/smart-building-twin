@@ -18,10 +18,20 @@ export class HospitalDesign {
   private glow: THREE.MeshStandardMaterial;
   private aluminium: THREE.MeshStandardMaterial;
   private porcelain: THREE.MeshStandardMaterial;
+  private podiumGlass: THREE.MeshPhysicalMaterial;
+  private podiumStone: THREE.MeshStandardMaterial;
+  private podiumMetal: THREE.MeshStandardMaterial;
   private screenGeometry = new THREE.PlaneGeometry(5.6, 2.8);
   private disposed = false;
   private advertPending = true;
   private advertising = new THREE.Group();
+  private entryScreen?: THREE.Mesh;
+  get entranceScreen() { return this.entryScreen; }
+  get finishState() {
+    return this.surfaces.flatMap(({ mesh }) => (Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+      .filter((m): m is THREE.MeshStandardMaterial => m instanceof THREE.MeshStandardMaterial)
+      .map(m => [String(mesh.userData.building), m.name, m.color.getHexString()]));
+  }
   get assetsReady() { return !this.advertPending; }
   readonly billboardCount: number;
   readonly detailCount: number;
@@ -33,14 +43,20 @@ export class HospitalDesign {
       map: maps.color, emissiveMap: maps.light, emissive: 0xffd8a4, emissiveIntensity: 1.1,
       roughness: .09, roughnessMap: maps.rough, metalness: .12, ior: 1.5,
       clearcoat: 1, clearcoatRoughness: .06, envMapIntensity: 8, side: THREE.DoubleSide });
-    this.pearl = new THREE.MeshStandardMaterial({ name: 'original-hospital-pearl', color: 0xe7d9b9,
+    this.glass.name = 'proposal-tower-glass';
+    this.podiumGlass = this.glass.clone(); this.podiumGlass.name = 'proposal-podium-glass';
+    this.podiumGlass.color.set(0x609b97); this.podiumGlass.roughness = .19; this.podiumGlass.envMapIntensity = 4;
+    this.pearl = new THREE.MeshStandardMaterial({ name: 'proposal-tower-panel', color: 0xc8dbe6,
       map: this.panels(), roughness: .48, metalness: .12, side: THREE.DoubleSide });
+    this.podiumStone = new THREE.MeshStandardMaterial({ name: 'proposal-podium-stone', color: 0xc9a16b,
+      map: this.pearl.map, roughness: .65, metalness: .03, emissive: 0xffc679, side: THREE.DoubleSide });
     const aluminium = this.aluminium = new THREE.MeshStandardMaterial({ color: 0xd4e3e6, emissive: 0xd6e5ed, roughness: .21, metalness: .55 });
     const porcelain = this.porcelain = new THREE.MeshStandardMaterial({ color: 0xe9efed, emissive: 0xfff2db, roughness: .26, metalness: .24 });
-    this.pearl.emissive.set(0xffd38a);
+    this.podiumMetal = new THREE.MeshStandardMaterial({ name: 'proposal-podium-metal', color: 0xb6a17a, emissive: 0xf2c98a, roughness: .33, metalness: .6 });
+    this.pearl.emissive.set(0xc9e2f4);
     this.glow = new THREE.MeshStandardMaterial({ color: 0xe7ce9f, emissive: 0xffd5a0, emissiveIntensity: 1.6, roughness: .45 });
     const blue = new THREE.MeshStandardMaterial({ color: 0x168f9c, metalness: .4, roughness: .25 });
-    this.materials.push(this.glass, this.pearl, aluminium, porcelain, this.glow, blue);
+    this.materials.push(this.glass, this.pearl, aluminium, porcelain, this.glow, blue, this.podiumGlass, this.podiumStone, this.podiumMetal);
     const ad = new THREE.TextureLoader().load(import.meta.env.BASE_URL + 'assets/hospital-billboard.png', texture => {
       if (this.disposed) { texture.dispose(); return; }
       this.advertPending = false; invalidate();
@@ -52,7 +68,8 @@ export class HospitalDesign {
     model.traverse(object => {
       if (!(object instanceof THREE.Mesh)) return;
       const source = object.material;
-      const design = (Array.isArray(source) ? source : [source]).map(material => material.name === 'project-glass' ? this.glass : this.pearl);
+      const podium = object.userData.building === 'B';
+      const design = (Array.isArray(source) ? source : [source]).map(material => material.name === 'project-glass' ? podium ? this.podiumGlass : this.glass : podium ? this.podiumStone : this.pearl);
       this.surfaces.push({ mesh: object, source, design: Array.isArray(source) ? design : design[0] });
       if (!(Array.isArray(source) ? source : [source]).some(m => m.name === 'project-glass')) return;
       const positions = object.geometry.getAttribute('position');
@@ -82,7 +99,8 @@ export class HospitalDesign {
         rotation, size: new THREE.Vector3(w, h, d),
       });
       // Intersect with actual wall triangles, preserving courtyard gaps and side profiles.
-      for (let u = Math.ceil(minU / 1.5) * 1.5; u <= maxU; u += 1.5) {
+      const mullionSpacing = face.zone === 'B' ? 3 : 1.5;
+      for (let u = Math.ceil(minU / mullionSpacing) * mullionSpacing; u <= maxU; u += mullionSpacing) {
         for (const [from, to] of this.intervals(face.triangles, 0, u)) {
           if (to - from < .25) continue;
           frames.push(part(u, (from + to) / 2, .055, to - from, .12, .07));
@@ -94,21 +112,33 @@ export class HospitalDesign {
         for (const [from, to] of this.intervals(face.triangles, 1, y)) {
           if (to - from < .08) continue;
           frames.push(part((from + to) / 2, y, to - from, .065, .13, .06));
-          bands.push(part((from + to) / 2, y - .15, to - from, face.zone === 'A' ? .4 : .34, .22, .08));
+          bands.push(part((from + to) / 2, y - .15, to - from, face.zone === 'A' ? .4 : .85, .22, .08));
           if (face.zone === 'B' || Math.round(y / storey) % 3 === 0) lights.push(part((from + to) / 2, y - .29, to - from, .025, .04, .205));
         }
       }
       for (const [from, to] of this.intervals(face.triangles, 1, maxY - .025)) if (to - from > .08) bands.push(part((from + to) / 2, maxY, to - from, .15, .24, .06));
-      if (face.zone === 'B' && minY < 2.2 && maxY > 3.2) {
+      if (minY < 2.2 && maxY > 7.4) {
         for (const [from, to] of this.intervals(face.triangles, 1, 3.2)) {
           if (to - from < 9) continue;
-          const score = face.n.dot(new THREE.Vector3(-.6, 0, .8)) * 10 + Math.min(to - from, 20) / 20;
+          const score = (face.zone === 'A' ? 30 : 0) + face.n.dot(new THREE.Vector3(-.84, 0, .54)) * 10 + Math.min(to - from, 20) / 20;
           if (!entry || score > entry.score) entry = { face, from, to, score };
         }
       }
     }
-    this.batch(frames, aluminium); this.batch(bands, this.pearl); this.batch(fins, porcelain); this.batch(lights, this.glow);
+    this.batch(frames, aluminium, this.podiumMetal); this.batch(bands, this.pearl, this.podiumStone); this.batch(fins, porcelain); this.batch(lights, this.glow);
     if (entry) this.entrance(entry.face, (entry.from + entry.to) / 2, aluminium, blue, porcelain);
+    if (entry) {
+      const { face } = entry, center = (entry.from + entry.to) / 2;
+      const board = new THREE.Group(); board.name = 'proposed-main-entrance-advertisement';
+      board.userData = { building: face.zone, originalProposal: true, billboard: true };
+      board.position.copy(face.u).multiplyScalar(center).addScaledVector(face.n, face.distance + 3.3);
+      board.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(face.u, new THREE.Vector3(0, 1, 0), face.n));
+      const frame = new THREE.Mesh(this.unit, this.podiumMetal); frame.scale.set(8.5, 4.4, .2); frame.position.y = 5.3; board.add(frame);
+      const image = this.entryScreen = new THREE.Mesh(this.screenGeometry, screen); image.name = 'entrance-advertising-screen';
+      image.scale.set(8.2 / 5.6, 4.1 / 2.8, 1); image.position.set(0, 5.3, .12); board.add(image);
+      for (const x of [-4.05, 4.05]) { const post = new THREE.Mesh(this.unit, this.podiumMetal); post.scale.set(.16, 4.25, .2); post.position.set(x, 5.15, -.2); board.add(post); }
+      this.advertising.add(board);
+    }
     const advertisements: { face: Face; center: number; y: number; score: number }[] = [];
     for (const face of faces.values()) {
       if (face.zone !== 'B') continue;
@@ -130,7 +160,7 @@ export class HospitalDesign {
       const image = new THREE.Mesh(this.screenGeometry, screen); image.position.z = .08; board.add(image); this.advertising.add(board);
     }
     this.root.add(this.advertising);
-    this.billboardCount = chosen.length;
+    this.billboardCount = chosen.length + (entry ? 1 : 0);
     this.detailCount = frames.length + bands.length + fins.length + lights.length;
     model.add(this.root); this.setEnabled(true);
   }
@@ -156,10 +186,10 @@ export class HospitalDesign {
     return merged;
   }
 
-  private batch(parts: Part[], material: THREE.Material) {
+  private batch(parts: Part[], material: THREE.Material, podiumMaterial = material) {
     for (const zone of ['A', 'B']) {
       const list = parts.filter(p => p.zone === zone); if (!list.length) continue;
-      const mesh = new THREE.InstancedMesh(this.unit, material, list.length), matrix = new THREE.Matrix4();
+      const mesh = new THREE.InstancedMesh(this.unit, zone === 'B' ? podiumMaterial : material, list.length), matrix = new THREE.Matrix4();
       list.forEach((p, i) => mesh.setMatrixAt(i, matrix.compose(p.position, p.rotation, p.size)));
       mesh.userData = { building: zone, originalProposal: true }; mesh.castShadow = material !== this.glow; mesh.receiveShadow = material !== this.glow;
       mesh.computeBoundingSphere(); this.root.add(mesh);
@@ -167,7 +197,7 @@ export class HospitalDesign {
   }
 
   private entrance(face: Face, center: number, metal: THREE.Material, blue: THREE.Material, white: THREE.Material) {
-    const group = new THREE.Group(); group.userData = { building: 'B', originalProposal: true };
+    const group = new THREE.Group(); group.userData = { building: face.zone, originalProposal: true };
     group.position.copy(face.u).multiplyScalar(center).addScaledVector(face.n, face.distance + .14);
     group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(face.u, new THREE.Vector3(0, 1, 0), face.n));
     const box = (w: number, h: number, d: number, x: number, y: number, z: number, material: THREE.Material) => {
@@ -236,6 +266,9 @@ export class HospitalDesign {
   setStreetscape(enabled: boolean) { this.advertising.visible = enabled; }
   setDaylight(day: number) {
     this.glass.emissiveIntensity = THREE.MathUtils.lerp(2.1, .19, day);
+    this.podiumGlass.emissiveIntensity = THREE.MathUtils.lerp(.8, .08, day);
+    this.podiumStone.emissiveIntensity = THREE.MathUtils.lerp(.34, .07, day);
+    this.podiumMetal.emissiveIntensity = THREE.MathUtils.lerp(.12, .025, day);
     this.glow.emissiveIntensity = THREE.MathUtils.lerp(2.8, .3, day);
     this.aluminium.emissiveIntensity = THREE.MathUtils.lerp(.65, .09, day);
     this.porcelain.emissiveIntensity = THREE.MathUtils.lerp(.8, .13, day);

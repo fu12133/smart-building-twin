@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { NIGHT_TIME, WEATHER_ROUTE, weatherFixture } from './weather-fixture';
+import { createHash } from 'node:crypto';
 
 test('R1: reference blue palette, right data columns and centered floor remain usable', async ({ page }) => {
   test.setTimeout(process.env.CI ? 150000 : 60000);
@@ -74,4 +75,40 @@ test('R2: source-anchored streetscape, image boards and varied context are optio
   await page.getByRole('button', { name: 'Reset view', exact: true }).click(); await settled();
   expect((await state()).streetscape.visible).toBe(true);
   expect((await state()).gpuGeometries).toBe(original.gpuGeometries);
+});
+
+test('R3: main entrance has a rendered advertisement and tower/podium use distinct finishes', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 150000 : 60000);
+  await page.clock.setFixedTime(NIGHT_TIME);
+  await page.route(WEATHER_ROUTE, route => route.fulfill({ json: weatherFixture() }));
+  await page.goto('/');
+  const state = () => page.evaluate(() => window.__BUILDING_HARNESS__!());
+  await expect.poll(async () => (await state()).assetsReady, { timeout: process.env.CI ? 45000 : 20000 }).toBe(true);
+  const original = await state(), entrance = original.entranceScreen!;
+  expect(entrance).not.toBeNull(); expect(entrance.imageReady).toBe(true);
+  const canvas = page.locator('.scene-host canvas'), rect = (await canvas.boundingBox())!;
+  const xs = entrance.corners.map(p => rect.x + (p[0] + 1) * rect.width / 2);
+  const ys = entrance.corners.map(p => rect.y + (1 - p[1]) * rect.height / 2);
+  const clip = { x: Math.floor(Math.min(...xs)), y: Math.floor(Math.min(...ys)), width: Math.ceil(Math.max(...xs) - Math.min(...xs)), height: Math.ceil(Math.max(...ys) - Math.min(...ys)) };
+  expect(clip.width).toBeGreaterThan(24); expect(clip.height).toBeGreaterThan(14);
+  expect(clip.x).toBeGreaterThan(rect.x); expect(clip.x + clip.width).toBeLessThan(1440);
+  expect(clip.y).toBeGreaterThan(rect.y); expect(clip.y + clip.height).toBeLessThan(900);
+  const glass = original.hospitalFinishes.filter(m => m[1].endsWith('-glass'));
+  expect(new Set(glass.map(m => m[2])).size).toBe(2);
+  const solid = original.hospitalFinishes.filter(m => !m[1].endsWith('-glass'));
+  expect(new Set(solid.map(m => m[2])).size).toBe(2);
+  const fingerprint = (data: Buffer) => createHash('sha256').update(data).digest('hex');
+  const visible = fingerprint(await page.screenshot({ clip }));
+  await page.screenshot({ path: 'artifacts/harness/entrance-advertisement.png', clip });
+  await page.screenshot({ path: 'artifacts/harness/entrance-podium-contrast.png' });
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('场景配套', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await expect.poll(async () => (await state()).assetsReady).toBe(true);
+  expect(fingerprint(await page.screenshot({ clip })), 'Entrance screen changes actual rendered entrance pixels').not.toBe(visible);
+  expect((await state()).camera).toEqual(original.camera);
+  await page.getByRole('button', { name: '图层设置' }).click();
+  await page.getByLabel('原创医院方案', { exact: true }).uncheck();
+  await page.getByRole('button', { name: '图层设置' }).click();
+  expect((await state()).hospitalFinishes.every(m => m[1].startsWith('project-'))).toBe(true);
 });

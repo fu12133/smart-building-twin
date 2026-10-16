@@ -15,6 +15,8 @@ export class HospitalAsset {
   get proposalDetails() { return this.design?.detailCount ?? 0; }
   get assetsReady() { return this.ready && !!this.design?.assetsReady; }
   get billboardCount() { return this.design?.billboardCount ?? 0; }
+  get entranceScreen() { return this.design?.entranceScreen; }
+  get proposalFinishes() { return this.design?.finishState ?? []; }
 
   constructor(url: string, private onLoad: () => void, private onError: () => void, invalidate: () => void = () => {}) {
     new GLTFLoader().load(url, asset => {

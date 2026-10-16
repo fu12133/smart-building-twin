@@ -7,6 +7,11 @@ The optional hospital proposal MUST include real 3D trees, people, vehicles and 
 - **WHEN** a visitor opens or rotates the hospital proposal
 - **THEN** trees, human figures, cars and image-based facade advertising are visible as real scene objects, with varied surrounding finishes and no replacement of source roads/buildings
 
+#### Scenario: Recognizable entrance and upper/lower finish distinction
+- **WHEN** the default proposed hospital exterior is inspected
+- **THEN** an advertising screen is mounted above the proposed main-entrance canopy and remains legible in the default composition, with support/frame geometry; the upper tower has cool-blue glass/silver vertical detailing and the podium has warm-stone/champagne horizontal detailing, using separate materials and spacing rather than one repeated facade treatment
+- **AND** source/proposal and streetscape controls restore or hide the additions consistently without changing original source buffers
+
 #### Scenario: Hide additions and retain source
 - **WHEN** the visitor turns off the proposal, opens full-source context or enters a floor
 - **THEN** added props and advertising disappear, original geometry stays intact, and returning restores the chosen presentation without resource growth or late-loaded attachment to disposed scenes
