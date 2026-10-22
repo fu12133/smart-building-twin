@@ -52,6 +52,8 @@ test('V1: real pointer rotation changes camera and rendered image', async ({ pag
 });
 
 test('V2: wheel zoom, right-button pan, keyboard and reset', async ({ page }) => {
+  // Slow CI completed all camera assertions, then exhausted the case budget in the final PNG capture.
+  test.setTimeout(process.env.CI ? 240000 : 45000);
   await ready(page);
   const original = await snapshot(page);
   const layout = await page.evaluate(() => ({ height: innerHeight, panelBottom: Math.max(...[...document.querySelectorAll('.left-panels .panel,.right-panels .panel')].map(e => e.getBoundingClientRect().bottom)) }));
@@ -76,10 +78,12 @@ test('V2: wheel zoom, right-button pan, keyboard and reset', async ({ page }) =>
 });
 
 test('V3: automatic rotation starts and actually stops', async ({ page }) => {
+  test.setTimeout(process.env.CI ? 180000 : 45000);
   await ready(page);
   const start = await snapshot(page);
   await page.getByRole('button', { name: '自动巡航' }).click();
-  await expect.poll(async () => delta((await snapshot(page)).camera, start.camera)).toBeGreaterThan(3);
+  // Assert the same real movement on slow software GPUs without treating it as a frame-rate benchmark.
+  await expect.poll(async () => delta((await snapshot(page)).camera, start.camera), { timeout: process.env.CI ? 45000 : 12000 }).toBeGreaterThan(3);
   await page.getByRole('button', { name: '暂停巡航' }).click();
   expect((await snapshot(page)).autoActive).toBe(false);
   await page.waitForTimeout(1300); // Allow OrbitControls damping to settle.

@@ -23,6 +23,8 @@ async function englishCopy(page: Page) {
 }
 
 test('L1: English updates all views in place, preserves selection and persists across reload', async ({ page }) => {
+  // The slow CI trace completed locale/state/reload assertions and timed out during the final screenshot.
+  test.setTimeout(process.env.CI ? 240000 : 45000);
   let requests = 0; await page.unroute(WEATHER_ROUTE);
   await page.route(WEATHER_ROUTE, route => { requests++; return route.fulfill({ json: weatherFixture() }); });
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));

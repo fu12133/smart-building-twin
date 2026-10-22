@@ -1,5 +1,6 @@
 - [x] Inspect repository, deployment contract and authentication state; record proposal/design/scenarios.
 - [x] Obtain valid fu12133 authentication and inspect/create the destination safely.
-- [ ] Publish source and enable Pages using the existing gated workflow.
+- [x] Publish source and enable Pages using the existing gated workflow.
+- [x] Inspect the slow cloud failures, preserve assertions and verify all59 cases are uniquely covered across isolated shards.
 - [ ] Pass specification/build/harness and actual public-URL acceptance; inspect screenshot.
 - [ ] Update links/evidence, archive the change and deliver repository/demo URLs.

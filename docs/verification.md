@@ -314,3 +314,19 @@ Actual in-app browser follow-up also enabled Summary metrics, switched English, 
 Final actual public production acceptance passed1/1(54.3s total,53.5s case), using ?v=338e978 and the same120s overall CLI budget. It checked live Open-Meteo freshness/UI, four assetHTTP200s, real canvas rotation, source/full-source restoration, floor/equipment, bilingual renderer retention, default celestial state, sunlight preview/view and no browser/resource errors. Actual18:03 default-public screenshot inspected: blue reference hierarchy, single portrait entrance screen/recessed portal, continuous podium-base finishes and source surroundings retained. Model/time/weather labels remain honest. Final JSON: artifacts/ci/hospital-public-final-production.json. Runtime revision338e9781da4399d6e5daa9480efb6121d83820be is deployed; no newly researched candidate is integrated. The standalone Sam candidate preview remains local only.
 
 OpenSpec change archived successfully as2026-10-16-hospital-visual-emphasis; updated baseline strict validation passed3/3. Final documentation/evidence-only commit will use [skip ci], preserving the verified338e978 runtime. Preview4187 remains for local app/candidate evaluation; only this task's4188 preview is stopped after public acceptance.
+
+## 2026-10-22 fu12133目标发布（进行中）
+
+用户指定fu12133账号及演示页面。初始工作树39e528e干净，旧origin保留；fu12133保存授权失效，官方设备登录由用户完成后gh api user实际返回fu12133，公开新仓库fu12133/smart-building-twin创建并确认ADMIN/isPrivate=false。身份授权材料未写入项目。新增独立fu12133远端，旧站不迁移/删除。README主链接改为新目标，首次上传/Pages尚在进行，不能据预期URL声称已上线。
+
+OpenSpec publish-fu12133先记录目标、设计、安全推送和实际公网场景。严格4/4及PAGES_BASE_PATH=/smart-building-twin/构建通过，JS CO5ZdhRw/CSS2QvF0lpJ/ThreeCri1c2pP与先前运行相同，src与模型资产没有修改。本地完整59项harness正在执行；以最终JSON/实际新URL结果补充结论，不把旧域名验收或网页登录当新部署成功。
+
+本地本次完整harness59/59通过（10.1分钟），无跳过或失败；JSON保存artifacts/ci/fu12133-local-harness.json。源代码/资产与原运行版无差异。首次push已核对远端1756dca，Pages按workflow启用。新账号工作流39794774115仍在GitHub runner队列，未称演示页面可用；后续记录云端/实际新域名验收。
+
+状态校正：后续旧job119879223130数据补出了14:20:14至14:29:13的实际执行步骤，harness在14:29:12被本次受控重试取消；这与先前多次API返回queued/no steps矛盾。因此不能把旧run实际全程描述为未分配runner，也不能确诊浮动镜像导致排队。固定24.04保留为已验收环境的可重复性改进，应用/测试不变；不再做状态不充分的重启，等待39795946596完整结果。已向用户更正先前排队判断。
+
+新任务39795946596的后续job记录确认14:29:18已实际启动，14:29:56进入harness（runner名GitHub Actions 1000000036），依赖/规格/浏览器准备均成功。后续记录将按实际步骤时间和最终日志，不再把中间queued响应推断成真实全程排队。
+
+Cloud39795946596 completed56/59 in42.6min and correctly blocked publication. Actual report step data was extracted from the official failure artifact without executing its HTML: V2 completed all camera assertions and then spent38.1s in the final screenshot before the90s case limit; L1 completed locale/state/reload assertions and timed out in its final screenshot. V3 moved2.6347 units but missed the unchanged>3 movement threshold within12s. These are not recorded passes. Preserve every functional/error/resource assertion and motion setting. Only affected CI timing is adjusted: V2/L1 total240s, V3 total180s/movement poll45s; local limits remain unchanged. No application/geometry change.
+
+Focused modified V2/V3/L1 passed3/3(48.8s), JSON artifacts/ci/fu12133-focused-harness.json. Strict4/4 and prefix build passed again with identical JS/CSS/Three hashes. Actual Playwright CLI lists audit three case-level shards:20+20+19=59, no duplicates/omissions; JSON artifacts/ci/fu12133-shard-coverage.json. YAML parse/dependency checks passed: three separate one-worker validation runners, fail-fast=false, single build needs all validation, single deploy needs build, unique failure artifact names. This retains the full gate; new cloud and actual public acceptance remain pending.

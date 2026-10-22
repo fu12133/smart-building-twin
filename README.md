@@ -119,7 +119,7 @@ npm run preview -- --port 4188 --strictPort
 复验生产站点：
 
 ```powershell
-$env:PRODUCTION_URL = 'https://guangfubill-crypto.github.io/smart-building-twin/'
+$env:PRODUCTION_URL = 'https://fu12133.github.io/smart-building-twin/'
 npm run harness:production
 Remove-Item Env:PRODUCTION_URL
 ```

@@ -104,3 +104,14 @@
 - 读取AGENTS和public-deployment基线、确认旧远端/工作流/子路径配置。fu12133现有授权失效，发起官方设备登录并请用户完成身份授权。先记录publish-fu12133规格/设计/任务，在等待期间进行独立验证，不声称已创建目标仓库或上线新站。
 - 用户完成设备授权；gh api user实际返回fu12133，token具有repo/workflow范围。已检查该账号实际仓库列表，无smart-building-twin，安全新建公开fu12133/smart-building-twin，并仅添加fu12133远端；旧origin保留。
 - 严格规格4/4和仓库子路径build已通过，产物hash与原验收运行一致(index-CO5ZdhRw.js/index-2QvF0lpJ.css/three-Cri1c2pP.js)。本地59项harness进行中。README主链接指向新目标，实际新站仍待Pages部署/公网验证。
+- 首次完整历史推送成功，1756dcaa3e7acaa9d56c21040aec02da49917fa5已在fu12133/main，main上游为fu12133，gh默认仓库也设为fu12133/smart-building-twin。旧origin保留不推送。Pages API已返回workflow及实际html_url=https://fu12133.github.io/smart-building-twin/；工作流39794774115排队中，尚未声称已部署。
+- 本地完整59/59（10.1分钟）通过，严格4/4、子路径构建通过。首次完整上传及Pages workflow配置完成；39794774115当前等待GitHub托管runner，演示成功须继续等待实际部署/新URL验证。
+- 39794774115排队超过数分钟，job.runner_name=null、无steps/annotations；repo Actions enabled=true/allowed_actions=all，Pages已按workflow启用。GitHub官方status API在此次查看显示Actions/Pages operational（https://www.githubstatus.com/api/v2/summary.json）；未确诊队列原因。
+- 核对旧成功38881670261日志：实际Image ubuntu-24.04 /24.04.5。先更新publish-fu12133设计，再将两个job固定已验收ubuntu-24.04作一次受控重试；不削弱任何检查、不修改应用运行代码。未找到猜测的node_modules/playwright-core旧路径，未以此失败作兼容性结论。
+- GH旧任务后续步骤记录表明初始queued/no-runner结果不完整：实际曾从14:20运行harness到14:29被重试取消。修正此前“全程排队”推断，已向用户说明。固定24.04是可重复性改进，不称已证明/修复队列原因；保留新run39795946596，不再重启。
+- 浏览器补查尝试：CUA Chrome inventory fetch失败、IAB打开新run页超时；停止此路线，不把尝试当UI验收。CLI可读，新域名最终仍使用既有真实production harness检查画布/天气/资源并保存截图。
+- 新job119883511948后续记录确认实际于14:29:18启动（runner GitHub Actions 1000000036），14:29:56进入完整harness；此前queued状态不是可靠的实时执行状态。依赖/规格/浏览器准备均通过。继续等待完整测试/构建/发布，不再重启。
+- 中途监控gh run watch出现一次EOF，重启监控而未重启CI。公开新域名部署前HTTP404仅作未上线状态，不当应用失败。官方job日志与step日志接口在此次运行中均返回404，未取得实时case日志，不能把等待状态推断为已通过/失败；继续等待最终结果。
+- CUA改用已有IAB的core tabs API后恢复读取，wrapper创建曾超时但实际已创建tab1。已直接打开新run的build实时页，看到用例推进至57（近期44–57均为通过标记，R4约2.7分钟、S1约1.1分钟、G2约1.7分钟）；不能据此推定整套59成功，等待最终汇总。已告知用户实时日志问题可忽略，不再需要其提供文字。实际云端此轮比此前慢，不再猜测排队/失败原因。
+- 最终故障报告已取到：V2所有相机断言完成后在最后PNG耗时38.1秒撞90秒总限；L1语言/状态/重载断言完成后最后PNG超时；V3 12秒内实际移动2.6347未达>3。保持阈值和全部断言，只给受影响CI用例有限额外预算。本地改后3/3（48.8秒）通过，严格4/4、构建同hash。
+- CI改为三台独立runner分片，每台仍1worker；CLI实际列表20+20+19精确覆盖59项，无重复遗漏。build依赖全部validate，deploy依赖build，任一失败仍禁止发布。没有本地构建绕过门禁。

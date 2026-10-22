@@ -106,3 +106,4 @@
 - 用户要求更新到GitHub账号fu12133并提供演示页面。现有干净工作树39e528e，origin为旧账号；gh有效账号仍是guangfubill-crypto，fu12133 keyring凭据invalid。公开repo列表为空不代表授权后无私有仓库，须待验证身份后检查。
 - 已开启gh官方设备授权，等待用户以fu12133完成；不把认证材料写入项目。当前运行逻辑无需改变，PAGES_BASE_PATH由仓库名推导，沿用现有gated Pages工作流。
 - fu12133实际身份授权已核对；已新建公开smart-building-twin并保留旧origin，新增fu12133远端。工作流权限repo/workflow具备，仓库名称沿用，运行代码无改动，最终演示预期为https://fu12133.github.io/smart-building-twin/，尚未称已上线。
+- 新远端首次push成功；Pages已按build_type=workflow创建，GitHub返回新账号正式html_url，homepage指向相同网址。main上游和gh默认目标为fu12133，原origin仍可追溯旧仓库。
