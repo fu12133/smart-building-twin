@@ -6,5 +6,6 @@ The user requests the existing hospital twin and its demonstration page under Gi
 ## What Changes
 - Publish the existing source to public fu12133/smart-building-twin, reusing a suitable existing repository if present after authentication.
 - Enable GitHub Pages using the existing validation/build/deployment workflow and repository-relative asset paths.
+- Pin the workflow to the previously validated ubuntu-24.04 image rather than a floating operating-system label; retain every acceptance gate.
 - Update the primary source/demo links only after the destination is confirmed. Preserve original attribution, historical evidence and the old deployment.
 - Verify specs/build/harness and the actual new public URL before recording success. No hospital geometry or runtime behavior changes are intended.
