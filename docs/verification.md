@@ -330,3 +330,15 @@ OpenSpec publish-fu12133先记录目标、设计、安全推送和实际公网�
 Cloud39795946596 completed56/59 in42.6min and correctly blocked publication. Actual report step data was extracted from the official failure artifact without executing its HTML: V2 completed all camera assertions and then spent38.1s in the final screenshot before the90s case limit; L1 completed locale/state/reload assertions and timed out in its final screenshot. V3 moved2.6347 units but missed the unchanged>3 movement threshold within12s. These are not recorded passes. Preserve every functional/error/resource assertion and motion setting. Only affected CI timing is adjusted: V2/L1 total240s, V3 total180s/movement poll45s; local limits remain unchanged. No application/geometry change.
 
 Focused modified V2/V3/L1 passed3/3(48.8s), JSON artifacts/ci/fu12133-focused-harness.json. Strict4/4 and prefix build passed again with identical JS/CSS/Three hashes. Actual Playwright CLI lists audit three case-level shards:20+20+19=59, no duplicates/omissions; JSON artifacts/ci/fu12133-shard-coverage.json. YAML parse/dependency checks passed: three separate one-worker validation runners, fail-fast=false, single build needs all validation, single deploy needs build, unique failure artifact names. This retains the full gate; new cloud and actual public acceptance remain pending.
+
+### fu12133最终发布与实际公网验收
+
+[新仓库](https://github.com/fu12133/smart-building-twin)为公开仓库，账号身份/ADMIN权限、main上游及gh默认目标已核对为fu12133。本地remote.pushDefault也指向fu12133，旧origin和旧Pages保留。运行源码dded2268e3f2eccdb4e244fe32d7e70d6752b727；[成功工作流39805726286](https://github.com/fu12133/smart-building-twin/actions/runs/39805726286)的三组完整结果分别20/20(14.4min)、20/20(14.4min)、19/19(7.1min)，总59/59，与事先CLI唯一覆盖审计一致，无遗漏或跳过。每台仅1worker，所有分组通过后单独build/deploy均成功；未通过本地发布绕过门禁。官方完整日志保存artifacts/ci/fu12133-final-cloud.log。
+
+[新演示网址](https://fu12133.github.io/smart-building-twin/)及版本查询?v=dded226均返回HTTP200，HTML实际匹配JS index-CO5ZdhRw.js、CSS index-2QvF0lpJ.css、Three three-Cri1c2pP.js。与本次本地/云端子路径构建一致，src/public/依赖/Vite配置相对原39e528e没有修改；上传的主体/周边Git blob也与本地一致（95ce16523e8f061b0ea2f24bc7384fc0c23eef13 /241c927993181e5d8aa392db56eaa5a5f1e05c19）。
+
+实际新域名production harness通过1/1（44.6秒总计、43.9秒case），120秒CLI整体预算。使用新浏览器上下文、真实Open-Meteo而非fixture，检查四个运行资产HTTP200、模型/周边加载、画布拖拽、源视图、楼层设备、语言保留renderer/选择、深圳北京时间/天气、默认天体及日照预览，并检查无console/resource错误和无生产诊断入口。JSON为artifacts/ci/fu12133-public-production.json。实际23:52的复位后公网截图已查看（测试通过公开控件暂停动效，因此该截图并非默认动效状态的证明；测试此前另行核对默认动效及暂停）。新站可匿名访问。
+
+本地完整59/59(10.1min)适用于相同应用；测试预算/分片调整后重点3/3(48.8s)、严格4/4、相同产物构建通过。云端初次取消、56/59失败和真实排队状态判断修正均保留，未计作成功。AGENTS新增已验证的主发布目标和独立分片门禁知识。接下来仅进行OpenSpec归档及文档/截图[skip ci]提交，不改变已验收运行产物。
+
+OpenSpec已成功归档为2026-10-22-publish-fu12133，合并两项修改后的基线严格3/3通过。普通分享网址再次HTTP200并匹配全部构建指纹。实际IAB新站也已打开，读到医院模型加载成功和默认“广告播放·入口人流（示意）”状态，保留为用户演示标签页。最终仅提交文档/截图[skip ci]，已验收的dded226运行产物保持不变。

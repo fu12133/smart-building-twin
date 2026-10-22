@@ -2,5 +2,5 @@
 - [x] Obtain valid fu12133 authentication and inspect/create the destination safely.
 - [x] Publish source and enable Pages using the existing gated workflow.
 - [x] Inspect the slow cloud failures, preserve assertions and verify all59 cases are uniquely covered across isolated shards.
-- [ ] Pass specification/build/harness and actual public-URL acceptance; inspect screenshot.
-- [ ] Update links/evidence, archive the change and deliver repository/demo URLs.
+- [x] Pass specification/build/harness and actual public-URL acceptance; inspect screenshot.
+- [x] Update links/evidence, archive the change and deliver repository/demo URLs.
