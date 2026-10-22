@@ -88,3 +88,11 @@
 2. 真实三维配套、可逆源材质、双列面板和主体构图 — complete
 3. 同尺寸图像对照、规格/构建及完整回归 — complete
 4. Pages发布、公网验证、证据和归档 — complete
+
+## 2026-10-22 发布到fu12133
+1. 读取现有部署规格、记录目标/授权状态及OpenSpec变更 — complete
+2. fu12133重新授权、核对目标仓库、准备安全推送 — pending user authentication
+3. 规格/子路径构建/完整harness及Pages工作流 — pending
+4. 新公网验收、链接更新、证据归档和交付 — pending
+
+现有origin为guangfubill-crypto/smart-building-twin，保留旧站。fu12133保存的gh凭据失效；已开启官方device-login，不写入认证码/令牌到项目文件。不覆盖非空无关仓库，不force-push。

@@ -4,9 +4,9 @@
 
 ## 在线使用
 
-[打开医院数字孪生（中/英）](https://guangfubill-crypto.github.io/smart-building-twin/)。访问者无需安装 Node.js，使用现代浏览器即可操作模型。
+[打开医院数字孪生（中/英）](https://fu12133.github.io/smart-building-twin/)。访问者无需安装 Node.js，使用现代浏览器即可操作模型。
 
-源码仓库：[guangfubill-crypto/smart-building-twin](https://github.com/guangfubill-crypto/smart-building-twin)。
+源码仓库：[fu12133/smart-building-twin](https://github.com/fu12133/smart-building-twin)。
 
 右上角提供“中文 / English”切换，默认中文并记住选择。导航、图表、场景标签、楼层设备、天气和帮助支持英文；切换保留当前模型视角、楼层和设备详情。两种语言都显示Asia/Shanghai时间，真实源文件名和设备ID不翻译。
 

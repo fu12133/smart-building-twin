@@ -101,3 +101,8 @@
 - 通过官网明确Download GLB链接成功取得21,013,304字节文件，保存ignored artifacts/ci/candidate-assets/sam-walk.glb，SHA256289dfe56f8d1a51582c681d31a796b0e9cdf6f3684af1461d0feb2c33c648ba8。先前普通页面请求403不是此次明确下载链接的结果。
 - 读取实际glTF：91,610三角、12mesh、13material、10PNG、1skin/1animation。官方网页CC0；文件asset.copyright空，保留官方来源说明。审计JSON在同一ignored目录。
 - 临时独立Three.js预览 artifacts/ci/candidate-assets/preview.html（4187同路径）已通过实际浏览器加载并查看原动画。人物比例比几何占位细致，仍是简化皮肤/衣服，未达到扫描级写实；20MB与面数不适合直接批量复制。未接入医院应用/公开包，未改变源医院、当前发布资产或候选的网页性能限制。
+
+## 2026-10-22 目标账号发布
+- 用户要求更新到GitHub账号fu12133并提供演示页面。现有干净工作树39e528e，origin为旧账号；gh有效账号仍是guangfubill-crypto，fu12133 keyring凭据invalid。公开repo列表为空不代表授权后无私有仓库，须待验证身份后检查。
+- 已开启gh官方设备授权，等待用户以fu12133完成；不把认证材料写入项目。当前运行逻辑无需改变，PAGES_BASE_PATH由仓库名推导，沿用现有gated Pages工作流。
+- fu12133实际身份授权已核对；已新建公开smart-building-twin并保留旧origin，新增fu12133远端。工作流权限repo/workflow具备，仓库名称沿用，运行代码无改动，最终演示预期为https://fu12133.github.io/smart-building-twin/，尚未称已上线。
